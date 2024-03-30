@@ -1,7 +1,19 @@
+use comrak::{markdown_to_html, Options};
 use regex::RegexBuilder;
 
 pub fn render(input: &str) -> String {
-    let mut out = input.to_string();
+    let mut options = Options::default();
+
+    options.extension.table = true;
+    options.extension.superscript = true;
+    options.extension.strikethrough = true;
+    options.extension.autolink = true;
+    options.extension.header_ids = Option::Some(String::new());
+    // options.render.unsafe_ = true;
+    options.render.escape = true;
+    options.parse.smart = false;
+
+    let mut out = markdown_to_html(&input, &options);
 
     // allowed elements
     let allowed_elements: Vec<&str> = Vec::from([
@@ -63,16 +75,6 @@ pub fn render(input: &str) -> String {
         "^(\\!{3})\\s(?<TYPE>.*?)\\s(?<TITLE>.*?)$",
         "<div class=\"mdnote note-$2\"><b class=\"mdnote-title\">$3</b></div>\n",
     );
-
-    // markdown images (normal)
-    out = regex_replace(
-        &out,
-        r"!\[(.*?)\]\((.*?)\)",
-        "<img alt=\"$1\" title=\"$1\" src=\"$2\" />",
-    );
-
-    // markdown links
-    out = regex_replace(&out, r"\[(.*?)\]\((.*?)\)", "<a href=\"$2\">$1</a>");
 
     // some bbcode stuff
     out = regex_replace(&out, r"\[b\](.*?)\[/b\]", "<strong>$1</strong>"); // bold
@@ -157,9 +159,6 @@ pub fn render(input: &str) -> String {
     out = regex_replace(&out, "(<script.*>)", "");
     out = regex_replace(&out, "(<link.*>)", "");
     out = regex_replace(&out, "(<meta.*>)", "");
-
-    // auto paragraph
-    out = regex_replace_dmnl(&out, "^(.*?)\n{2,}", "<p>\n$1\n</p>");
 
     // return
     out

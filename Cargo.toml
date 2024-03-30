@@ -20,6 +20,7 @@ actix-files = "0.6.5"
 actix-web = "4.5.1"
 askama = "0.12.1"
 awc = { version = "3.4.0", features = ["rustls"] }
+comrak = "0.22.0"
 dotenv = "0.15.0"
 env_logger = "0.11.3"
 handlebars = "5.1.2"
