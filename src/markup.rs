@@ -64,6 +64,16 @@ pub fn render(input: &str) -> String {
         "<div class=\"mdnote note-$2\"><b class=\"mdnote-title\">$3</b></div>\n",
     );
 
+    // markdown images (normal)
+    out = regex_replace(
+        &out,
+        r"!\[(.*?)\]\((.*?)\)",
+        "<img alt=\"$1\" title=\"$1\" src=\"$2\" />",
+    );
+
+    // markdown links
+    out = regex_replace(&out, r"\[(.*?)\]\((.*?)\)", "<a href=\"$2\">$1</a>");
+
     // some bbcode stuff
     out = regex_replace(&out, r"\[b\](.*?)\[/b\]", "<strong>$1</strong>"); // bold
     out = regex_replace(&out, r"\[i\](.*?)\[/i\]", "<em>$1</em>"); // italic
@@ -147,6 +157,9 @@ pub fn render(input: &str) -> String {
     out = regex_replace(&out, "(<script.*>)", "");
     out = regex_replace(&out, "(<link.*>)", "");
     out = regex_replace(&out, "(<meta.*>)", "");
+
+    // auto paragraph
+    out = regex_replace_dmnl(&out, "^(.*?)\n{2,}", "<p>\n$1\n</p>");
 
     // return
     out

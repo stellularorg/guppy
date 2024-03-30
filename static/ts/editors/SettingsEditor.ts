@@ -2,9 +2,9 @@ export function user_settings(
     metadata: { [key: string]: any },
     name: string,
     field: HTMLElement,
-    _type: "user" | "board" | undefined
+    _type: "user" | undefined
 ): void {
-    if (_type === undefined) _type = "board";
+    if (_type === undefined) _type = "user";
 
     const update_form = document.getElementById(
         "update-form"
@@ -86,40 +86,21 @@ export function user_settings(
     update_form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        if (_type === "user") {
-            // user
-            const res = await fetch(`/api/auth/users/${name}/update`, {
-                method: "POST",
-                body: JSON.stringify(metadata),
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
+        // user
+        const res = await fetch(`/api/auth/users/${name}/update`, {
+            method: "POST",
+            body: JSON.stringify(metadata),
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
-            const json = await res.json();
+        const json = await res.json();
 
-            if (json.success === false) {
-                return alert(json.message);
-            } else {
-                window.location.reload();
-            }
+        if (json.success === false) {
+            return alert(json.message);
         } else {
-            // board
-            const res = await fetch(`/api/board/${name}/update`, {
-                method: "POST",
-                body: JSON.stringify(metadata),
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            const json = await res.json();
-
-            if (json.success === false) {
-                return alert(json.message);
-            } else {
-                window.location.reload();
-            }
+            window.location.reload();
         }
     });
 
@@ -132,36 +113,6 @@ export function user_settings(
         options = build_options(metadata, current_property);
         render_user_settings_fields(field, options, option_render);
     });
-
-    // handle delete
-    if (_type == "board") {
-        const delete_button = document.getElementById("delete-board");
-
-        delete_button!.addEventListener("click", async () => {
-            const _confirm = confirm(
-                "Are you sure you would like to delete this board? This cannot be undone."
-            );
-
-            if (_confirm === false) return;
-
-            // board
-            const res = await fetch(`/api/board/${name}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            const json = await res.json();
-
-            if (json.success === false) {
-                return alert(json.message);
-            } else {
-                alert("Board deleted");
-                window.location.href = "/";
-            }
-        });
-    }
 }
 
 function build_options(
