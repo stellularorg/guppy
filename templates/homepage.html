@@ -7,7 +7,10 @@
 {% endif %}
 {% endblock %}
 
+{% block head %}
+<meta http-equiv="refresh" content="0; url={{ bundlrs }}" />
+{% endblock %}
+
 {% block content %}
-<h1>Guppy!</h1>
 {% call super() %}
 {% endblock %}

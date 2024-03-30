@@ -76,6 +76,68 @@ pub fn render(input: &str) -> String {
         "<div class=\"mdnote note-$2\"><b class=\"mdnote-title\">$3</b></div>\n",
     );
 
+    // highlight
+    out = regex_replace(
+        &out,
+        "(\\={2})(.*?)(\\={2})",
+        "<span class=\"highlight\">$2</span>",
+    );
+
+    // unescape arrow alignment
+    out = regex_replace(&out, "-&gt;&gt;", "->>");
+    out = regex_replace(&out, "&lt;&lt;-", "<<-");
+
+    out = regex_replace(&out, "-&gt;", "->");
+    out = regex_replace(&out, "&lt;-", "<-");
+
+    // arrow alignment (flex)
+    let arrow_alignment_flex_regex = RegexBuilder::new("(\\->{2})(.*?)(\\->{2}|<{2}\\-)")
+        .multi_line(true)
+        .dot_matches_new_line(true)
+        .build()
+        .unwrap();
+
+    for capture in arrow_alignment_flex_regex.captures_iter(&out.clone()) {
+        let _match = capture.get(0).unwrap().as_str();
+        let content = capture.get(2).unwrap().as_str();
+
+        let align = if _match.ends_with(">") {
+            "right"
+        } else {
+            "center"
+        };
+
+        out = out.replacen(
+            _match,
+            &format!("<rf class=\"justify-{align}\">{content}</rf>\n"),
+            1,
+        );
+    }
+
+    // arrow alignment
+    let arrow_alignment_regex = RegexBuilder::new("(\\->{1})(.*?)(\\->{1}|<{1}\\-)")
+        .multi_line(true)
+        .dot_matches_new_line(true)
+        .build()
+        .unwrap();
+
+    for capture in arrow_alignment_regex.captures_iter(&out.clone()) {
+        let _match = capture.get(0).unwrap().as_str();
+        let content = capture.get(2).unwrap().as_str();
+
+        let align = if _match.ends_with(">") {
+            "right"
+        } else {
+            "center"
+        };
+
+        out = out.replacen(
+            _match,
+            &format!("<r class=\"text-{align}\">{content}</r>\n"),
+            1,
+        );
+    }
+
     // some bbcode stuff
     out = regex_replace(&out, r"\[b\](.*?)\[/b\]", "<strong>$1</strong>"); // bold
     out = regex_replace(&out, r"\[i\](.*?)\[/i\]", "<em>$1</em>"); // italic
