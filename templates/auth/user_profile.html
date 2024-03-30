@@ -5,7 +5,7 @@
 {% block toolbar %}
 <a class="button" href="/{{ user.username }}" style="border-left: 0">
     {{ user.username }}
-    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem;">{{ user.username }}</span>
+    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem;">{{ user.role }}</span>
 </a>
 {% endblock %}
 

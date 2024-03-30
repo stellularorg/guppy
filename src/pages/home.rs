@@ -13,6 +13,7 @@ struct HomeTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[get("/")]
@@ -51,6 +52,7 @@ pub async fn home_request(req: HttpRequest, data: web::Data<guppydb::AppData>) -
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                body_embed: base.body_embed,
             }
             .render()
             .unwrap(),

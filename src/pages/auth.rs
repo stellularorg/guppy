@@ -20,6 +20,7 @@ struct LoginTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Template)]
@@ -31,6 +32,7 @@ struct RegisterTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Template)]
@@ -42,6 +44,7 @@ struct LoginSecondaryTokenTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Template)]
@@ -54,6 +57,7 @@ struct UserProfileTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Default, PartialEq, serde::Deserialize)]
@@ -72,6 +76,7 @@ struct FollowersTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Template)]
@@ -85,6 +90,7 @@ struct FollowingTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[derive(Default, PartialEq, serde::Deserialize)]
@@ -102,6 +108,7 @@ struct SettingsTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    body_embed: String,
 }
 
 #[get("/d/auth/register")]
@@ -123,6 +130,7 @@ pub async fn register_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                body_embed: base.body_embed,
             }
             .render()
             .unwrap(),
@@ -147,6 +155,7 @@ pub async fn login_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                body_embed: base.body_embed,
             }
             .render()
             .unwrap(),
@@ -171,6 +180,7 @@ pub async fn login_secondary_token_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                body_embed: base.body_embed,
             }
             .render()
             .unwrap(),
@@ -505,7 +515,8 @@ pub async fn profile_view_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer
+        puffer: base.puffer,
+        body_embed: base.body_embed,
     };
 
     return HttpResponse::Ok()
@@ -576,7 +587,8 @@ pub async fn followers_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer
+        puffer: base.puffer,
+        body_embed: base.body_embed,
     };
 
     return HttpResponse::Ok()
@@ -648,7 +660,8 @@ pub async fn following_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer
+        puffer: base.puffer,
+        body_embed: base.body_embed,
     };
 
     return HttpResponse::Ok()
@@ -722,7 +735,8 @@ pub async fn user_settings_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer
+        puffer: base.puffer,
+        body_embed: base.body_embed,
     };
 
     return HttpResponse::Ok()
