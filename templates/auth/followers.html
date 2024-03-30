@@ -1,0 +1,73 @@
+{% extends "../base.html" %}
+
+{% block title %}{{ user.username }}{% endblock %}
+
+{% block toolbar %}
+<a class="button" href="/{{ user.username }}" style="border-left: 0">
+    {{ user.username }}
+    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem;">{{ user.role }}</span>
+</a>
+{% endblock %}
+
+{% block head %}
+<meta property="og:title" content="{{ user.username }}" />
+<meta property="og:description" content="{{ user.username }}'s followers" />
+{% endblock %}
+
+{% block content%}
+<main class="small flex flex-column g-4">
+    <div id="error" class="mdnote note-error full" style="display: none;"></div>
+    <div id="success" class="mdnote note-note full" style="display: none;"></div>
+
+    <div class="flex justify-space-between align-center">
+        <h3 class="no-margin">{{ user.username }}'s followers</h3>
+    </div>
+
+    <div class="card secondary round flex flex-column g-4">
+        {% for u in followers.iter() %}
+        {% let follow_log = crate::db::guppydb::deserialize_userfollow(u.content.to_owned()) %}
+
+        <a class="button secondary full round justify-space-between flex-wrap" href="/{{ follow_log.user }}"
+            style="height: max-content !important;">
+            <span class="flex align-center g-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-circle-user-round">
+                    <path d="M18 20a6 6 0 0 0-12 0" />
+                    <circle cx="12" cy="10" r="4" />
+                    <circle cx="12" cy="12" r="10" />
+                </svg>
+                {{ follow_log.user }}
+            </span>
+
+            <span style="opacity: 75%;">Followed <span class="date-time-to-localize">{{ u.timestamp }}</span></span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="full flex justify-space-between" id="pages">
+        <a class="button round" href="?offset={{offset - 50}}" disabled="{{ offset <= 0 }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="lucide lucide-arrow-left">
+                <path d="m12 19-7-7 7-7" />
+                <path d="M19 12H5" />
+            </svg>
+            Back
+        </a>
+
+        <a class="button round" href="?offset={{offset + 50}}" disabled="{{ followers.len() == 0 }}">
+            Next
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="lucide lucide-arrow-right">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+            </svg>
+        </a>
+    </div>
+</main>
+</div>
+</div>
+{% call super() %}
+{% endblock %}

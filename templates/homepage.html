@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block toolbar %}
+{% if auth_state == true %}
+<a class="button" href="/d" style="border-left: none;">Dashboard</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<h1>Guppy!</h1>
+{% call super() %}
+{% endblock %}

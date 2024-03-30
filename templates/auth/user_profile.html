@@ -1,0 +1,48 @@
+{% extends "../base.html" %}
+
+{% block title %}{{ user.username }}{% endblock %}
+
+{% block toolbar %}
+<a class="button" href="/{{ user.username }}" style="border-left: 0">
+    {{ user.username }}
+    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem;">{{ user.username }}</span>
+</a>
+{% endblock %}
+
+{% block head %}
+<meta property="og:title" content="{{ user.username }}" />
+<meta property="og:description" content="{{ user.username }}'s profile" />
+{% endblock %}
+
+{% block toolbar_right %}
+<div class="flex">
+    <a class="button" href="/{{ user.username }}/settings" title="Synced User Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="lucide lucide-file-cog">
+            <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v2" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <circle cx="6" cy="14" r="3" />
+            <path d="M6 10v1" />
+            <path d="M6 17v1" />
+            <path d="M10 14H9" />
+            <path d="M3 14H2" />
+            <path d="m9 11-.88.88" />
+            <path d="M3.88 16.12 3 17" />
+            <path d="m9 17-.88-.88" />
+            <path d="M3.88 11.88 3 11" />
+        </svg>
+    </a>
+</div>
+{% endblock %}
+
+{% block content%}
+{{ page|safe }}
+
+<div style="display: none;" id="puffer-url">{{ puffer }}</div>
+
+<script type="module">
+    import "/static/js/ProfileView.js";
+</script>
+{% call super() %}
+{% endblock %}
