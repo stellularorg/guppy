@@ -1,6 +1,6 @@
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 
-use crate::db::guppydb::{self, AppData, FullUser, Log, UserMetadata, UserState};
+use crate::db::{self, AppData, FullUser, Log, UserMetadata, UserState};
 
 use super::base;
 use askama::Template;
@@ -282,7 +282,7 @@ pub async fn profile_view_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: guppydb::DefaultReturn<Option<FullUser<String>>> =
+    let user: db::DefaultReturn<Option<FullUser<String>>> =
         data.db.get_user_by_username(username).await;
 
     if user.success == false {
@@ -294,38 +294,19 @@ pub async fn profile_view_request(
     let unwrap = user.payload.as_ref().unwrap();
 
     // verify auth status
-    let token_cookie = req.cookie("__Secure-Token");
-    let mut set_cookie: &str = "";
-
-    let mut token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
-
-    if token_user.is_some() {
-        // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
-            set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
-            token_user = Option::None;
-        }
-    }
+    let (set_cookie, _, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
 
     // ...
     let base = base::get_base_values(req.cookie("__Secure-Token").is_some());
 
     // ...
-    let followers_res: guppydb::DefaultReturn<usize> =
+    let followers_res: db::DefaultReturn<usize> =
         data.db.get_user_follow_count(username_c.clone()).await;
 
-    let following_res: guppydb::DefaultReturn<usize> =
+    let following_res: db::DefaultReturn<usize> =
         data.db.get_user_following_count(username_c.clone()).await;
 
-    let is_following_res: Option<guppydb::DefaultReturn<Option<guppydb::Log>>> =
+    let is_following_res: Option<db::DefaultReturn<Option<db::Log>>> =
         if token_user.is_some() && token_user.as_ref().unwrap().success {
             Option::Some(
                 data.db
@@ -450,10 +431,9 @@ pub async fn profile_view_request(
         {
             format!(
                 "<div class=\"flex flex-wrap g-4\">
-                    <button class=\"round guppy-primary\" id=\"mail-user\" data-endpoint=\"{}/api/auth/users/{}/mail\">Mail</button>
+                    <button class=\"round guppy-primary\" id=\"mail-user\" data-endpoint=\"/api/auth/users/{}/mail\">Mail</button>
                     <button class=\"round guppy-primary\" id=\"follow-user\" data-endpoint=\"/api/auth/users/{}/follow\">{}</button>
                 </div>", 
-                base.puffer,
                 user.username, 
                 user.username, 
                 if is_following == false {
@@ -536,7 +516,7 @@ pub async fn followers_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: guppydb::DefaultReturn<Option<FullUser<String>>> =
+    let user: db::DefaultReturn<Option<FullUser<String>>> =
         data.db.get_user_by_username(username).await;
 
     if user.success == false {
@@ -548,29 +528,10 @@ pub async fn followers_request(
     let unwrap = user.payload.as_ref().unwrap();
 
     // verify auth status
-    let token_cookie = req.cookie("__Secure-Token");
-    let mut set_cookie: &str = "";
-
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
-
-    if token_user.is_some() {
-        // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
-            set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
-            // token_user = Option::None;
-        }
-    }
+    let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
 
     // ...
-    let followers_res: guppydb::DefaultReturn<Option<Vec<guppydb::Log>>> = data
+    let followers_res: db::DefaultReturn<Option<Vec<db::Log>>> = data
         .db
         .get_user_followers(username_c.clone(), info.offset)
         .await;
@@ -609,7 +570,7 @@ pub async fn following_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: guppydb::DefaultReturn<Option<FullUser<String>>> =
+    let user: db::DefaultReturn<Option<FullUser<String>>> =
         data.db.get_user_by_username(username).await;
 
     if user.success == false {
@@ -621,29 +582,10 @@ pub async fn following_request(
     let unwrap = user.payload.as_ref().unwrap();
 
     // verify auth status
-    let token_cookie = req.cookie("__Secure-Token");
-    let mut set_cookie: &str = "";
-
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
-
-    if token_user.is_some() {
-        // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
-            set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
-            // token_user = Option::None;
-        }
-    }
+    let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
 
     // ...
-    let following_res: guppydb::DefaultReturn<Option<Vec<guppydb::Log>>> = data
+    let following_res: db::DefaultReturn<Option<Vec<db::Log>>> = data
         .db
         .get_user_following(username_c.clone(), info.offset)
         .await;
@@ -674,11 +616,11 @@ pub async fn following_request(
 /// Available at "/{name}/settings"
 pub async fn user_settings_request(
     req: HttpRequest,
-    data: web::Data<guppydb::AppData>,
+    data: web::Data<db::AppData>,
 ) -> impl Responder {
     // get user
     let name: String = req.match_info().get("name").unwrap().to_string();
-    let profile: guppydb::DefaultReturn<Option<FullUser<String>>> =
+    let profile: db::DefaultReturn<Option<FullUser<String>>> =
         data.db.get_user_by_username(name).await;
 
     if profile.success == false {
@@ -688,26 +630,7 @@ pub async fn user_settings_request(
     let profile = profile.payload.unwrap();
 
     // verify auth status
-    let token_cookie = req.cookie("__Secure-Token");
-    let mut set_cookie: &str = "";
-
-    let mut token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
-
-    if token_user.is_some() {
-        // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
-            set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
-            token_user = Option::None;
-        }
-    }
+    let (set_cookie, token_cookie, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
 
     if token_user.is_none() {
         return HttpResponse::NotAcceptable().body("An account is required to do this");

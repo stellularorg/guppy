@@ -1,6 +1,6 @@
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 
-use crate::db::guppydb;
+use crate::db;
 
 use super::base;
 use askama::Template;
@@ -17,7 +17,7 @@ struct HomeTemplate {
 }
 
 #[get("/")]
-pub async fn home_request(req: HttpRequest, data: web::Data<guppydb::AppData>) -> impl Responder {
+pub async fn home_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl Responder {
     // verify auth status
     let token_cookie = req.cookie("__Secure-Token");
     let mut set_cookie: &str = "";

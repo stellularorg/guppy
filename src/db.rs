@@ -1,82 +1,75 @@
-//! # GuppyDB
-//! Database handler for all database types
-use super::{
-    cachedb::CacheDB,
-    sql::{self, Database, DatabaseOpts},
-};
-
-use sqlx::{Column, Row};
-
-use crate::utility;
+use dorsal::query as sqlquery;
 use serde::{Deserialize, Serialize};
-
-use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct AppData {
-    pub db: GuppyDB,
+    pub db: Database,
     pub http_client: awc::Client,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, Clone)]
-/// Default API return value
-pub struct DefaultReturn<T> {
-    pub success: bool,
-    pub message: String,
-    pub payload: T,
+pub use dorsal::db::special::auth_db::{
+    FullUser, RoleLevel, RoleLevelLog, UserMetadata, UserState,
+};
+
+pub use dorsal::DefaultReturn;
+
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UserFollow {
+    pub user: String,         // the user that is following `is_following`
+    pub is_following: String, // use user that `user` is following
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DatabaseReturn {
-    pub data: HashMap<String, String>,
-}
-
-#[derive(Debug, Default, PartialEq, sqlx::FromRow, Clone, Serialize, Deserialize)]
-/// A user object
-pub struct UserState<M> {
+#[derive(Default, PartialEq, Clone, Serialize, Deserialize)]
+pub struct Board<M> {
     // selectors
-    pub username: String,
-    pub id_hashed: String, // users use their UNHASHED id to login, it is used as their session id too!
-    //                        the hashed id is the only id that should ever be public!
-    pub role: String,
+    pub name: String,
     // dates
     pub timestamp: u128,
     // ...
     pub metadata: M,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
-pub struct RoleLevel {
-    pub elevation: i32, // this marks the level of the role, 0 should always be member
-    // users cannot manage users of a higher elevation than them
-    pub name: String,             // role name, shown on user profiles
-    pub permissions: Vec<String>, // a vec of user permissions (ex: "ManagePastes")
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BoardMetadata {
+    pub owner: String,                      // username of owner
+    pub is_private: String, // if the homepage of the board is shown to other users (not owner)
+    pub allow_anonymous: Option<String>, // if anonymous users can post
+    pub allow_open_posting: Option<String>, // if all users can post on the board (not just owner)
+    pub topic_required: Option<String>, // if posts are required to include a topic value
+    pub about: Option<String>, // welcome message
+    pub tags: Option<String>, // SPACE separated list of tags that identify the board for searches
+                            // TODO: we could likely export a list of "valid" tags at some point in the future
+}
+
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BoardPostLog {
+    pub author: String, // username of owner
+    pub content: String,
+    pub content_html: String,
+    pub topic: Option<String>, // post topic, content is hidden unless expanded if provided
+    pub board: String,         // name of board the post is located in
+    pub is_hidden: bool,       // if the post is hidden in the feed (does nothing right now)
+    pub reply: Option<String>, // the ID of the post we're replying to
+    pub pinned: Option<bool>,  // pin the post to the top of the board feed
+    pub replies: Option<usize>, // not really managed in the log, just used to show the number of replies this post has
+    pub tags: Option<String>,   // same as board tags, just for posts specifically
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FullUser<M> {
-    pub user: UserState<M>,
-    pub level: RoleLevel,
+pub struct BoardIdentifier {
+    pub name: String,
+    pub tags: String,
 }
 
-#[derive(Default, Clone, sqlx::FromRow, Serialize, Deserialize, PartialEq)]
-pub struct RoleLevelLog {
-    pub id: String,
-    pub level: RoleLevel,
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq)]
+// Takes the place of "about" in BoardMetadata, identifies a board as a user mail stream
+pub struct UserMailStreamIdentifier {
+    pub _is_user_mail_stream: bool, // always going to be true ... cannot be edited into board about ANYWHERE
+    pub user1: String,              // username of first user
+    pub user2: String,              // username of second user
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
-pub struct UserMetadata {
-    pub about: String,
-    pub avatar_url: Option<String>,
-    pub secondary_token: Option<String>,
-    pub allow_mail: Option<String>,    // yes/no
-    pub nickname: Option<String>,      // user display name
-    pub page_template: Option<String>, // profile handlebars template
-}
-
-#[derive(Default, PartialEq, sqlx::FromRow, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Log {
     // selectors
     pub id: String,
@@ -87,15 +80,9 @@ pub struct Log {
     pub content: String,
 }
 
-#[derive(Debug, Default, sqlx::FromRow, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LogIdentifier {
     pub id: String,
-}
-
-#[derive(Default, Clone, Serialize, Deserialize, PartialEq)]
-pub struct UserFollow {
-    pub user: String,         // the user that is following `is_following`
-    pub is_following: String, // use user that `user` is following
 }
 
 #[allow(dead_code)]
@@ -103,45 +90,27 @@ pub fn deserialize_userfollow(input: String) -> UserFollow {
     serde_json::from_str::<UserFollow>(&input).unwrap()
 }
 
-// ...
+// server
 #[derive(Clone)]
-#[cfg(feature = "postgres")]
-pub struct GuppyDB {
-    pub db: Database<sqlx::PgPool>,
-    pub options: DatabaseOpts,
-    pub cachedb: CacheDB,
+pub struct Database {
+    pub base: dorsal::StarterDatabase,
+    pub auth: dorsal::AuthDatabase,
 }
 
-#[derive(Clone)]
-#[cfg(feature = "mysql")]
-pub struct GuppyDB {
-    pub db: Database<sqlx::MySqlPool>,
-    pub options: DatabaseOpts,
-    pub cachedb: CacheDB,
-}
+impl Database {
+    pub async fn new(opts: dorsal::DatabaseOpts) -> Database {
+        let db = dorsal::StarterDatabase::new(opts).await;
 
-#[derive(Clone)]
-#[cfg(feature = "sqlite")]
-pub struct GuppyDB {
-    pub db: Database<sqlx::SqlitePool>,
-    pub options: DatabaseOpts,
-    pub cachedb: CacheDB,
-}
-
-impl GuppyDB {
-    pub async fn new(options: DatabaseOpts) -> GuppyDB {
-        return GuppyDB {
-            db: sql::create_db(options.clone()).await,
-            options,
-            cachedb: CacheDB::new().await,
-        };
+        Database {
+            base: db.clone(),
+            auth: dorsal::AuthDatabase { base: db },
+        }
     }
 
     pub async fn init(&self) {
-        // create tables
-        let c = &self.db.client;
+        let c = &self.base.db.client;
 
-        let _ = sqlx::query(
+        let _ = sqlquery(
             "CREATE TABLE IF NOT EXISTS \"Users\" (
                 username VARCHAR(1000000),
                 id_hashed VARCHAR(1000000),
@@ -153,7 +122,7 @@ impl GuppyDB {
         .execute(c)
         .await;
 
-        let _ = sqlx::query(
+        let _ = sqlquery(
             "CREATE TABLE IF NOT EXISTS \"Logs\" (
                 id VARCHAR(1000000),
                 logtype VARCHAR(1000000),
@@ -163,71 +132,6 @@ impl GuppyDB {
         )
         .execute(c)
         .await;
-    }
-
-    #[cfg(feature = "sqlite")]
-    fn textify_row(&self, row: sqlx::sqlite::SqliteRow) -> DatabaseReturn {
-        // get all columns
-        let columns = row.columns();
-
-        // create output
-        let mut out: HashMap<String, String> = HashMap::new();
-
-        for column in columns {
-            let value = row.get(column.name());
-            out.insert(column.name().to_string(), value);
-        }
-
-        // return
-        return DatabaseReturn { data: out };
-    }
-
-    #[cfg(feature = "postgres")]
-    fn textify_row(&self, row: sqlx::postgres::PgRow) -> DatabaseReturn {
-        // get all columns
-        let columns = row.columns();
-
-        // create output
-        let mut out: HashMap<String, String> = HashMap::new();
-
-        for column in columns {
-            let value = row.get(column.name());
-            out.insert(column.name().to_string(), value);
-        }
-
-        // return
-        return DatabaseReturn { data: out };
-    }
-
-    #[cfg(feature = "mysql")]
-    fn textify_row(&self, row: sqlx::mysql::MySqlRow) -> DatabaseReturn {
-        // get all columns
-        let columns = row.columns();
-
-        // create output
-        let mut out: HashMap<String, String> = HashMap::new();
-
-        for column in columns {
-            let value = row.try_get::<Vec<u8>, _>(column.name());
-
-            if value.is_ok() {
-                // returned bytes instead of text :(
-                // we're going to convert this to a string and then add it to the output!
-                out.insert(
-                    column.name().to_string(),
-                    std::str::from_utf8(value.unwrap().as_slice())
-                        .unwrap()
-                        .to_string(),
-                );
-            } else {
-                // already text
-                let value = row.get(column.name());
-                out.insert(column.name().to_string(), value);
-            }
-        }
-
-        // return
-        return DatabaseReturn { data: out };
     }
 
     // users
@@ -241,71 +145,12 @@ impl GuppyDB {
         &self,
         hashed: String,
     ) -> DefaultReturn<Option<FullUser<String>>> {
-        // fetch from database
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
-            "SELECT * FROM \"Users\" WHERE \"id_hashed\" = ?"
-        } else {
-            "SELECT * FROM \"Users\" WHERE \"id_hashed\" = $1"
-        };
-
-        let c = &self.db.client;
-        let res = sqlx::query(query)
-            .bind::<&String>(&hashed)
-            .fetch_one(c)
-            .await;
-
-        if res.is_err() {
-            return DefaultReturn {
-                success: false,
-                message: String::from("User does not exist"),
-                payload: Option::None,
-            };
-        }
-
-        // ...
-        let row = res.unwrap();
-        let row = self.textify_row(row).data;
-
-        let role = row.get("role").unwrap().to_string();
-        if role == "banned" {
-            return DefaultReturn {
-                success: false,
-                message: String::from("User is banned"),
-                payload: Option::None,
-            };
-        }
-
-        // ...
-        let meta = row.get("metadata"); // for compatability - users did not have metadata until Bundlrs v0.10.6
-        let user = UserState {
-            username: row.get("username").unwrap().to_string(),
-            id_hashed: row.get("id_hashed").unwrap().to_string(),
-            role: role.clone(),
-            timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
-            metadata: if meta.is_some() {
-                meta.unwrap().to_string()
-            } else {
-                String::new()
-            },
-        };
-
-        // fetch level from role
-        let level = self.get_level_by_role(role).await;
-
-        // return
-        return DefaultReturn {
-            success: true,
-            message: String::from("User exists"),
-            payload: Option::Some(FullUser {
-                user,
-                level: level.payload.level,
-            }),
-        };
+        self.auth.get_user_by_hashed(hashed).await
     }
 
-    /// Get a user by their unhashed ID (hashes ID and then calls [`GuppyDB::get_user_by_hashed()`])
+    /// Get a user by their unhashed ID (hashes ID and then calls [`Database::get_user_by_hashed()`])
     ///
-    /// Calls [`GuppyDB::get_user_by_unhashed_st()`] if user is invalid.
+    /// Calls [`Database::get_user_by_unhashed_st()`] if user is invalid.
     ///
     /// # Arguments:
     /// * `unhashed` - `String` of the user's unhashed ID
@@ -313,16 +158,7 @@ impl GuppyDB {
         &self,
         unhashed: String,
     ) -> DefaultReturn<Option<FullUser<String>>> {
-        let res = self
-            .get_user_by_hashed(utility::hash(unhashed.clone()))
-            .await;
-
-        if res.success == false {
-            // treat unhashed as a secondary token and try again
-            return self.get_user_by_unhashed_st(unhashed).await;
-        }
-
-        res
+        self.auth.get_user_by_unhashed(unhashed).await
     }
 
     /// Get a user by their unhashed secondary token
@@ -333,69 +169,7 @@ impl GuppyDB {
         &self,
         unhashed: String,
     ) -> DefaultReturn<Option<FullUser<String>>> {
-        // fetch from database
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
-            "SELECT * FROM \"Users\" WHERE \"metadata\" LIKE ?"
-        } else {
-            "SELECT * FROM \"Users\" WHERE \"metadata\" LIKE $1"
-        };
-
-        let c = &self.db.client;
-        let res = sqlx::query(query)
-            .bind::<&String>(&format!(
-                "%\"secondary_token\":\"{}\"%",
-                crate::utility::hash(unhashed)
-            ))
-            .fetch_one(c)
-            .await;
-
-        if res.is_err() {
-            return DefaultReturn {
-                success: false,
-                message: String::from("User does not exist"),
-                payload: Option::None,
-            };
-        }
-
-        // ...
-        let row = res.unwrap();
-        let row = self.textify_row(row).data;
-
-        let role = row.get("role").unwrap().to_string();
-        if role == "banned" {
-            return DefaultReturn {
-                success: false,
-                message: String::from("User is banned"),
-                payload: Option::None,
-            };
-        }
-
-        // ...
-        let meta = row.get("metadata"); // for compatability - users did not have metadata until Bundlrs v0.10.6
-        let user = UserState {
-            username: row.get("username").unwrap().to_string(),
-            id_hashed: row.get("id_hashed").unwrap().to_string(),
-            role: role.clone(),
-            timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
-            metadata: if meta.is_some() {
-                meta.unwrap().to_string()
-            } else {
-                String::new()
-            },
-        };
-
-        // fetch level from role
-        let level = self.get_level_by_role(role).await;
-
-        // return
-        return DefaultReturn {
-            success: true,
-            message: String::from("User exists"),
-            payload: Option::Some(FullUser {
-                user,
-                level: level.payload.level,
-            }),
-        };
+        self.auth.get_user_by_unhashed_st(unhashed).await
     }
 
     /// Get a user by their username
@@ -406,106 +180,7 @@ impl GuppyDB {
         &self,
         username: String,
     ) -> DefaultReturn<Option<FullUser<String>>> {
-        // check in cache
-        let cached = self.cachedb.get(format!("user:{}", username)).await;
-
-        if cached.is_some() {
-            // ...
-            let user = serde_json::from_str::<UserState<String>>(cached.unwrap().as_str()).unwrap();
-
-            // get role
-            let role = user.role.clone();
-            if role == "banned" {
-                // account banned - we're going to act like it simply does not exist
-                return DefaultReturn {
-                    success: false,
-                    message: String::from("User is banned"),
-                    payload: Option::None,
-                };
-            }
-
-            // fetch level from role
-            let level = self.get_level_by_role(role.clone()).await;
-
-            // ...
-            return DefaultReturn {
-                success: true,
-                message: String::from("User exists (cache)"),
-                payload: Option::Some(FullUser {
-                    user,
-                    level: level.payload.level,
-                }),
-            };
-        }
-
-        // ...
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
-            "SELECT * FROM \"Users\" WHERE \"username\" = ?"
-        } else {
-            "SELECT * FROM \"Users\" WHERE \"username\" = $1"
-        };
-
-        let c = &self.db.client;
-        let res = sqlx::query(query)
-            .bind::<&String>(&username)
-            .fetch_one(c)
-            .await;
-
-        if res.is_err() {
-            return DefaultReturn {
-                success: false,
-                message: String::from("User does not exist"),
-                payload: Option::None,
-            };
-        }
-
-        // ...
-        let row = res.unwrap();
-        let row = self.textify_row(row).data;
-
-        let role = row.get("role").unwrap().to_string();
-        if role == "banned" {
-            // account banned - we're going to act like it simply does not exist
-            return DefaultReturn {
-                success: false,
-                message: String::from("User is banned"),
-                payload: Option::None,
-            };
-        }
-
-        // fetch level from role
-        let level = self.get_level_by_role(role.clone()).await;
-
-        // store in cache
-        let meta = row.get("metadata");
-        let user = UserState {
-            username: row.get("username").unwrap().to_string(),
-            id_hashed: row.get("id_hashed").unwrap().to_string(),
-            role,
-            timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
-            metadata: if meta.is_some() {
-                meta.unwrap().to_string()
-            } else {
-                String::new()
-            },
-        };
-
-        self.cachedb
-            .set(
-                format!("user:{}", username),
-                serde_json::to_string::<UserState<String>>(&user).unwrap(),
-            )
-            .await;
-
-        // return
-        return DefaultReturn {
-            success: true,
-            message: String::from("User exists (new)"),
-            payload: Option::Some(FullUser {
-                user,
-                level: level.payload.level,
-            }),
-        };
+        self.auth.get_user_by_username(username).await
     }
 
     /// Get a [`RoleLevel`] by its `name`
@@ -513,67 +188,7 @@ impl GuppyDB {
     /// # Arguments:
     /// * `name` - `String` of the level's role name
     pub async fn get_level_by_role(&self, name: String) -> DefaultReturn<RoleLevelLog> {
-        // check if level already exists in cache
-        let cached = self.cachedb.get(format!("level:{}", name)).await;
-
-        if cached.is_some() {
-            return DefaultReturn {
-                success: true,
-                message: String::from("Level exists (cache)"),
-                payload: serde_json::from_str::<RoleLevelLog>(cached.unwrap().as_str()).unwrap(),
-            };
-        }
-
-        // ...
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
-            "SELECT * FROM \"Logs\" WHERE \"logtype\" = 'level' AND \"content\" LIKE ?"
-        } else {
-            "SELECT * FROM \"Logs\" WHERE \"logtype\" = 'level' AND \"content\" LIKE $1"
-        };
-
-        let c = &self.db.client;
-        let res = sqlx::query(query)
-            .bind::<&String>(&format!("%\"name\":\"{}\"%", name))
-            .fetch_one(c)
-            .await;
-
-        if res.is_err() {
-            return DefaultReturn {
-                success: true,
-                message: String::from("Level does not exist, using default"),
-                payload: RoleLevelLog {
-                    id: String::new(),
-                    level: RoleLevel {
-                        name: String::from("member"),
-                        elevation: 0,
-                        permissions: Vec::new(),
-                    },
-                },
-            };
-        }
-
-        // ...
-        let row = res.unwrap();
-        let row = self.textify_row(row).data;
-
-        // store in cache
-        let id = row.get("id").unwrap().to_string();
-        let level = serde_json::from_str::<RoleLevel>(row.get("content").unwrap()).unwrap();
-
-        let level = RoleLevelLog { id, level };
-        self.cachedb
-            .set(
-                format!("level:{}", name),
-                serde_json::to_string::<RoleLevelLog>(&level).unwrap(),
-            )
-            .await;
-
-        // return
-        return DefaultReturn {
-            success: true,
-            message: String::from("Level exists (new)"),
-            payload: level,
-        };
+        self.auth.get_level_by_role(name).await
     }
 
     // SET
@@ -615,18 +230,18 @@ impl GuppyDB {
         }
 
         // ...
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "INSERT INTO \"Users\" VALUES (?, ?, ?, ?, ?)"
         } else {
             "INSERT INTO \"Users\" VALUES ($1, $2, $3, $4, $5)"
         };
 
-        let user_id_unhashed: String = utility::uuid();
-        let user_id_hashed: String = utility::hash(user_id_unhashed.clone());
-        let timestamp = utility::unix_epoch_timestamp().to_string();
+        let user_id_unhashed: String = dorsal::utility::uuid();
+        let user_id_hashed: String = dorsal::utility::hash(user_id_unhashed.clone());
+        let timestamp = dorsal::utility::unix_epoch_timestamp().to_string();
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&username)
             .bind::<&String>(&user_id_hashed)
             .bind::<&String>(&String::from("member")) // default role
@@ -678,15 +293,15 @@ impl GuppyDB {
         }
 
         // update user
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "UPDATE \"Users\" SET \"metadata\" = ? WHERE \"username\" = ?"
         } else {
             "UPDATE \"Users\" SET (\"metadata\") = ($1) WHERE \"username\" = $2"
         };
 
-        let c = &self.db.client;
+        let c = &self.base.db.client;
         let meta = &serde_json::to_string(&metadata).unwrap();
-        let res = sqlx::query(query)
+        let res = sqlquery(query)
             .bind::<&String>(meta)
             .bind::<&String>(&name)
             .execute(c)
@@ -701,7 +316,7 @@ impl GuppyDB {
         }
 
         // update cache
-        let existing_in_cache = self.cachedb.get(format!("user:{}", name)).await;
+        let existing_in_cache = self.base.cachedb.get(format!("user:{}", name)).await;
 
         if existing_in_cache.is_some() {
             let mut user =
@@ -709,7 +324,8 @@ impl GuppyDB {
             user.metadata = meta.to_string(); // update metadata
 
             // update cache
-            self.cachedb
+            self.base
+                .cachedb
                 .update(
                     format!("user:{}", name),
                     serde_json::to_string::<UserState<String>>(&user).unwrap(),
@@ -748,14 +364,14 @@ impl GuppyDB {
         }
 
         // update user
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "UPDATE \"Users\" SET \"role\" = ? WHERE \"username\" = ?"
         } else {
             "UPDATE \"Users\" SET (\"role\") = ($1) WHERE \"username\" = $2"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&str>("banned")
             .bind::<&String>(&name)
             .execute(c)
@@ -770,7 +386,7 @@ impl GuppyDB {
         }
 
         // update cache
-        let existing_in_cache = self.cachedb.get(format!("user:{}", name)).await;
+        let existing_in_cache = self.base.cachedb.get(format!("user:{}", name)).await;
 
         if existing_in_cache.is_some() {
             let mut user =
@@ -778,7 +394,8 @@ impl GuppyDB {
             user.role = String::from("banned"); // update role
 
             // update cache
-            self.cachedb
+            self.base
+                .cachedb
                 .update(
                     format!("user:{}", name),
                     serde_json::to_string::<UserState<String>>(&user).unwrap(),
@@ -871,7 +488,7 @@ impl GuppyDB {
     /// * `id` - `String` of the log's `id`
     pub async fn get_log_by_id(&self, id: String) -> DefaultReturn<Option<Log>> {
         // check in cache
-        let cached = self.cachedb.get(format!("log:{}", id)).await;
+        let cached = self.base.cachedb.get(format!("log:{}", id)).await;
 
         if cached.is_some() {
             // ...
@@ -886,14 +503,14 @@ impl GuppyDB {
         }
 
         // ...
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"id\" = ?"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"id\" = $1"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query).bind::<&String>(&id).fetch_one(c).await;
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).fetch_one(c).await;
 
         if res.is_err() {
             return DefaultReturn {
@@ -905,7 +522,7 @@ impl GuppyDB {
 
         // ...
         let row = res.unwrap();
-        let row = self.textify_row(row).data;
+        let row = self.base.textify_row(row).data;
 
         // store in cache
         let log = Log {
@@ -915,7 +532,8 @@ impl GuppyDB {
             content: row.get("content").unwrap().to_string(),
         };
 
-        self.cachedb
+        self.base
+            .cachedb
             .set(
                 format!("log:{}", id),
                 serde_json::to_string::<Log>(&log).unwrap(),
@@ -941,19 +559,19 @@ impl GuppyDB {
         logtype: String,
         content: String,
     ) -> DefaultReturn<Option<String>> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "INSERT INTO \"Logs\" VALUES (?, ?, ?, ?)"
         } else {
             "INSERT INTO \"Logs\" VALUES ($1, $2, $3, $4)"
         };
 
-        let log_id: String = utility::random_id();
+        let log_id: String = dorsal::utility::random_id();
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&log_id)
             .bind::<String>(logtype)
-            .bind::<String>(utility::unix_epoch_timestamp().to_string())
+            .bind::<String>(dorsal::utility::unix_epoch_timestamp().to_string())
             .bind::<String>(content)
             .execute(c)
             .await;
@@ -991,14 +609,14 @@ impl GuppyDB {
         }
 
         // update log
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "UPDATE \"Logs\" SET \"content\" = ? WHERE \"id\" = ?"
         } else {
             "UPDATE \"Logs\" SET (\"content\") = ($1) WHERE \"id\" = $2"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&content)
             .bind::<&String>(&id)
             .execute(c)
@@ -1013,7 +631,7 @@ impl GuppyDB {
         }
 
         // update cache
-        let existing_in_cache = self.cachedb.get(format!("log:{}", id)).await;
+        let existing_in_cache = self.base.cachedb.get(format!("log:{}", id)).await;
 
         if existing_in_cache.is_some() {
             let mut log = serde_json::from_str::<Log>(&existing_in_cache.unwrap()).unwrap();
@@ -1021,7 +639,8 @@ impl GuppyDB {
             log.content = content; // update content
 
             // update cache
-            self.cachedb
+            self.base
+                .cachedb
                 .update(
                     format!("log:{}", id),
                     serde_json::to_string::<Log>(&log).unwrap(),
@@ -1053,14 +672,14 @@ impl GuppyDB {
         }
 
         // update log
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "DELETE FROM \"Logs\" WHERE \"id\" = ?"
         } else {
             "DELETE FROM \"Logs\" WHERE \"id\" = $1"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query).bind::<&String>(&id).execute(c).await;
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).execute(c).await;
 
         if res.is_err() {
             return DefaultReturn {
@@ -1071,7 +690,7 @@ impl GuppyDB {
         }
 
         // update cache
-        self.cachedb.remove(format!("log:{}", id)).await;
+        self.base.cachedb.remove(format!("log:{}", id)).await;
 
         // return
         return DefaultReturn {
@@ -1094,14 +713,14 @@ impl GuppyDB {
         user: String,
         is_following: String,
     ) -> DefaultReturn<Option<Log>> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE ? AND \"logtype\" = 'follow'"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE $1 AND \"logtype\" = 'follow'"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&format!(
                 "%\"user\":\"{user}\",\"is_following\":\"{is_following}\"%"
             ))
@@ -1118,7 +737,7 @@ impl GuppyDB {
 
         // ...
         let row = res.unwrap();
-        let row = self.textify_row(row).data;
+        let row = self.base.textify_row(row).data;
 
         // return
         return DefaultReturn {
@@ -1143,14 +762,14 @@ impl GuppyDB {
         user: String,
         offset: Option<i32>,
     ) -> DefaultReturn<Option<Vec<Log>>> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE ? AND \"logtype\" = 'follow' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET ?"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE $1 AND \"logtype\" = 'follow' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET $2"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&format!("%\"is_following\":\"{user}\"%"))
             .bind(if offset.is_some() { offset.unwrap() } else { 0 })
             .fetch_all(c)
@@ -1169,7 +788,7 @@ impl GuppyDB {
         let mut output: Vec<Log> = Vec::new();
 
         for row in rows {
-            let row = self.textify_row(row).data;
+            let row = self.base.textify_row(row).data;
             output.push(Log {
                 id: row.get("id").unwrap().to_string(),
                 logtype: row.get("logtype").unwrap().to_string(),
@@ -1196,14 +815,14 @@ impl GuppyDB {
         user: String,
         offset: Option<i32>,
     ) -> DefaultReturn<Option<Vec<Log>>> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE ? AND \"logtype\" = 'follow' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET ?"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE $1 AND \"logtype\" = 'follow' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET $2"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&format!("%\"user\":\"{user}\"%"))
             .bind(if offset.is_some() { offset.unwrap() } else { 0 })
             .fetch_all(c)
@@ -1222,7 +841,7 @@ impl GuppyDB {
         let mut output: Vec<Log> = Vec::new();
 
         for row in rows {
-            let row = self.textify_row(row).data;
+            let row = self.base.textify_row(row).data;
             output.push(Log {
                 id: row.get("id").unwrap().to_string(),
                 logtype: row.get("logtype").unwrap().to_string(),
@@ -1244,14 +863,14 @@ impl GuppyDB {
     /// # Arguments:
     /// * `user` - username of user to check
     pub async fn get_user_follow_count(&self, user: String) -> DefaultReturn<usize> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE ? AND \"logtype\" = 'follow'"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE $1 AND \"logtype\" = 'follow'"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&format!("%\"is_following\":\"{user}\"%"))
             .fetch_all(c)
             .await;
@@ -1280,14 +899,14 @@ impl GuppyDB {
     /// # Arguments:
     /// * `user` - username of user to check
     pub async fn get_user_following_count(&self, user: String) -> DefaultReturn<usize> {
-        let query: &str = if (self.db._type == "sqlite") | (self.db._type == "mysql") {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE ? AND \"logtype\" = 'follow'"
         } else {
             "SELECT * FROM \"Logs\" WHERE \"content\" LIKE $1 AND \"logtype\" = 'follow'"
         };
 
-        let c = &self.db.client;
-        let res = sqlx::query(query)
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
             .bind::<&String>(&format!("%\"user\":\"{user}\"%"))
             .fetch_all(c)
             .await;
@@ -1371,5 +990,253 @@ impl GuppyDB {
             serde_json::to_string::<UserFollow>(&p).unwrap(),
         )
         .await
+    }
+
+    // mail streams
+
+    // GET
+    /// Get a [`UserMailStreamIdentifier`] [`Board`] by its users
+    ///
+    /// # Arguments:
+    /// * `props` - [`UserMailStreamIdentifier`]
+    pub async fn get_mail_stream_by_users(
+        &self,
+        props: UserMailStreamIdentifier,
+    ) -> DefaultReturn<Option<Board<String>>> {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"Boards\" WHERE \"metadata\" LIKE ?"
+        } else {
+            "SELECT * FROM \"Boards\" WHERE \"metadata\" LIKE $1"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
+            .bind::<&String>(&format!(
+                "%\"about\":\"{}\"%",
+                if &self.base.db._type == "mysql" {
+                    serde_json::to_string::<UserMailStreamIdentifier>(&props)
+                        .unwrap()
+                        .replace("\"", "\\\\\"")
+                } else {
+                    serde_json::to_string::<UserMailStreamIdentifier>(&props)
+                        .unwrap()
+                        .replace("\"", "\\\"")
+                }
+            ))
+            .fetch_one(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Board does not exist"),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let row = res.unwrap();
+        let row = self.base.textify_row(row).data;
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Board exists"),
+            payload: Option::Some(Board {
+                name: row.get("name").unwrap().to_string(),
+                timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+                metadata: row.get("metadata").unwrap().to_string(),
+            }),
+        };
+    }
+
+    /// Get all [`UserMailStreamIdentifier`] [`Board`] by a single participating user
+    ///
+    /// # Arguments:
+    /// * `user` - username of the user
+    /// * `offset` - optional value representing the SQL fetch offset
+    pub async fn get_user_mail_streams(
+        &self,
+        user: String,
+        offset: Option<i32>,
+    ) -> DefaultReturn<Vec<BoardIdentifier>> {
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"Boards\" WHERE \"metadata\" LIKE ? OR \"metadata\" LIKE ? ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET ?"
+        } else {
+            "SELECT * FROM \"Boards\" WHERE \"metadata\" LIKE $1 OR \"metadata\" LIKE $2 ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET $3"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
+            .bind::<String>(if &self.base.db._type == "mysql" {
+                format!("%\\\\\"user1\\\\\":\\\\\"{}\\\\\"%", user)
+            } else {
+                format!("%\\\"user1\\\":\\\"{}\\\"%", user)
+            })
+            .bind::<String>(if &self.base.db._type == "mysql" {
+                format!("%\\\\\"user2\\\\\":\\\\\"{}\\\\\"%", user)
+            } else {
+                format!("%\\\"user2\\\":\\\"{}\\\"%", user)
+            })
+            .bind(if offset.is_some() { offset.unwrap() } else { 0 })
+            .fetch_all(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Boards do not exist"),
+                payload: Vec::new(),
+            };
+        }
+
+        // ...
+        let rows = res.unwrap();
+        let mut output: Vec<BoardIdentifier> = Vec::new();
+
+        for row in rows {
+            let row = self.base.textify_row(row).data;
+
+            let metadata =
+                serde_json::from_str::<BoardMetadata>(row.get("metadata").unwrap()).unwrap();
+
+            let mailstream =
+                serde_json::from_str::<UserMailStreamIdentifier>(&metadata.about.unwrap()).unwrap();
+
+            output.push(BoardIdentifier {
+                name: row.get("name").unwrap().to_string(),
+                // we're going to use tags to store the name of the other user
+                tags: if user == mailstream.user1 {
+                    mailstream.user2
+                } else {
+                    mailstream.user1
+                },
+            });
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Boards exists"),
+            payload: output,
+        };
+    }
+
+    // SET
+    /// Create a new [`Board`] given various [properties](UserMailStreamIdentifier)
+    ///
+    /// # Arguments:
+    /// * `props` - [`UserMailStreamIdentifier`]
+    pub async fn create_mail_stream(
+        &self,
+        props: &mut UserMailStreamIdentifier,
+    ) -> DefaultReturn<Option<Board<String>>> {
+        let p: &mut UserMailStreamIdentifier = props; // borrowed props
+
+        // create default metadata
+        let metadata: BoardMetadata = BoardMetadata {
+            owner: String::new(),
+            is_private: String::from("yes"),
+            allow_anonymous: Option::Some(String::from("no")),
+            allow_open_posting: Option::Some(String::from("yes")),
+            topic_required: Option::Some(String::from("no")), // change to "yes" for a more inbox-like thing
+            about: Option::Some(
+                serde_json::to_string::<UserMailStreamIdentifier>(&p.clone()).unwrap(),
+            ),
+            tags: Option::None,
+        };
+
+        // check values
+
+        // make sure board does not exist
+        let existing: DefaultReturn<Option<Board<String>>> =
+            self.get_mail_stream_by_users(props.to_owned()).await;
+
+        if existing.success {
+            return DefaultReturn {
+                success: true, // return true so client still redirects
+                message: String::from("Board already exists!"),
+                payload: existing.payload, // return existing board if it does
+            };
+        }
+
+        // make sure board does not exist
+        let existing: DefaultReturn<Option<Board<String>>> = self
+            .get_mail_stream_by_users(UserMailStreamIdentifier {
+                _is_user_mail_stream: true,
+                user1: props.user2.clone(),
+                user2: props.user1.clone(),
+            })
+            .await;
+
+        if existing.success {
+            return DefaultReturn {
+                success: true, // return true so client still redirects
+                message: String::from("Board already exists!"),
+                payload: existing.payload, // return existing board if it does
+            };
+        }
+
+        // make sure other user exists (user1 should be the current user)
+        let existing: DefaultReturn<Option<FullUser<String>>> =
+            self.get_user_by_username(props.user2.clone()).await;
+
+        if !existing.success {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Other user is invalid"),
+                payload: Option::None,
+            };
+        }
+
+        // check user permissions
+        let user2_metadata =
+            serde_json::from_str::<UserMetadata>(&existing.payload.unwrap().user.metadata).unwrap();
+
+        if user2_metadata.allow_mail.is_some()
+            && user2_metadata.allow_mail.as_ref().unwrap() == "no"
+        {
+            return DefaultReturn {
+                success: false,
+                message: String::from("User is not accepting mail"),
+                payload: Option::None,
+            };
+        }
+
+        // create board
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "INSERT INTO \"Boards\" VALUES (?, ?, ?)"
+        } else {
+            "INSERT INTO \"Boards\" VALUES ($1, $2, $3)"
+        };
+
+        let c = &self.base.db.client;
+        let p: &mut Board<String> = &mut Board {
+            name: format!("inbox-{}", dorsal::utility::random_id()),
+            timestamp: dorsal::utility::unix_epoch_timestamp(),
+            metadata: String::new(),
+        };
+
+        let res = sqlquery(query)
+            .bind::<&String>(&p.name)
+            .bind::<&String>(&p.timestamp.to_string())
+            .bind::<&String>(&serde_json::to_string(&metadata).unwrap())
+            .execute(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: res.err().unwrap().to_string(),
+                payload: Option::None,
+            };
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Created board"),
+            payload: Option::Some(p.to_owned()),
+        };
     }
 }

@@ -10,25 +10,20 @@ use actix_files as fs;
 use actix_web::{web, App, HttpServer};
 use dotenv;
 
-use sqlx;
-
 pub mod config;
 pub mod db;
-pub mod utility;
 
 pub mod api;
 pub mod pages;
 
 pub mod markup;
 
-use crate::db::guppydb::{AppData, GuppyDB};
-use crate::db::sql::DatabaseOpts;
+use crate::db::{AppData, Database};
+use dorsal::DatabaseOpts;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
-
-    // std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
     // ...
@@ -58,8 +53,7 @@ async fn main() -> std::io::Result<()> {
         panic!("Missing required database config settings!");
     }
 
-    sqlx::any::install_default_drivers(); // install database drivers
-    let db: GuppyDB = GuppyDB::new(DatabaseOpts {
+    let db: Database = Database::new(DatabaseOpts {
         _type: db_type,
         host: db_host,
         user: if db_is_other {
@@ -125,6 +119,7 @@ async fn main() -> std::io::Result<()> {
             .service(crate::api::auth::update_request)
             .service(crate::api::auth::follow_request)
             .service(crate::api::auth::ban_request)
+            .service(crate::api::auth::create_mail_stream_request)
             // GET users
             .service(crate::api::auth::avatar_request)
             .service(crate::api::auth::followers_request)

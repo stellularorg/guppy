@@ -84,7 +84,7 @@ if (mail_button) {
             error.style.display = "block";
             error.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
         } else {
-            window.location.href = `${puffer}${json.payload.name}`;
+            window.location.href = `${puffer}/${json.payload.name}`;
         }
     });
 }

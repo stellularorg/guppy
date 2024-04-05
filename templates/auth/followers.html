@@ -25,7 +25,7 @@
 
     <div class="card secondary round flex flex-column g-4">
         {% for u in followers.iter() %}
-        {% let follow_log = crate::db::guppydb::deserialize_userfollow(u.content.to_owned()) %}
+        {% let follow_log = crate::db::deserialize_userfollow(u.content.to_owned()) %}
 
         <a class="button secondary full round justify-space-between flex-wrap" href="/{{ follow_log.user }}"
             style="height: max-content !important;">

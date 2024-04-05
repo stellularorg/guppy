@@ -1,10 +1,8 @@
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use serde_json::json;
 
-use crate::{
-    db::guppydb::{self, AppData, DefaultReturn, FullUser, UserFollow, UserMetadata},
-    utility,
-};
+use crate::db::{self, AppData, DefaultReturn, FullUser, UserFollow, UserMetadata};
+use dorsal::utility;
 
 #[derive(Default, PartialEq, serde::Deserialize)]
 pub struct OffsetQueryProps {
@@ -161,24 +159,12 @@ pub async fn edit_about_request(
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get token user
-    let token_cookie = req.cookie("__Secure-Token");
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
 
-    if token_user.is_some() {
-        // make sure user exists
-        if token_user.as_ref().unwrap().success == false {
-            return HttpResponse::NotFound().body("Invalid token");
-        }
-    } else {
-        return HttpResponse::NotAcceptable().body("An account is required to do this");
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
     }
 
     let token_user = token_user.unwrap().payload.unwrap();
@@ -250,24 +236,12 @@ pub async fn refresh_secondary_token_request(
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get token user
-    let token_cookie = req.cookie("__Secure-Token");
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
 
-    if token_user.is_some() {
-        // make sure user exists
-        if token_user.as_ref().unwrap().success == false {
-            return HttpResponse::NotFound().body("Invalid token");
-        }
-    } else {
-        return HttpResponse::NotAcceptable().body("An account is required to do this");
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
     }
 
     let token_user = token_user.unwrap().payload.unwrap();
@@ -306,8 +280,8 @@ pub async fn refresh_secondary_token_request(
     }
 
     // update secondary token
-    let token = crate::utility::uuid();
-    user.secondary_token = Option::Some(crate::utility::hash(token.clone())); // this is essentially just a second ID the user can signin with
+    let token = utility::uuid();
+    user.secondary_token = Option::Some(utility::hash(token.clone())); // this is essentially just a second ID the user can signin with
 
     // ...
     let res = data.db.edit_user_metadata_by_name(name, user).await;
@@ -330,24 +304,12 @@ pub async fn follow_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get token user
-    let token_cookie = req.cookie("__Secure-Token");
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
 
-    if token_user.is_some() {
-        // make sure user exists
-        if token_user.as_ref().unwrap().success == false {
-            return HttpResponse::NotFound().body("Invalid token");
-        }
-    } else {
-        return HttpResponse::NotAcceptable().body("An account is required to do this");
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
     }
 
     let token_user = token_user.unwrap().payload.unwrap();
@@ -376,24 +338,12 @@ pub async fn update_request(
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get token user
-    let token_cookie = req.cookie("__Secure-Token");
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
 
-    if token_user.is_some() {
-        // make sure user exists
-        if token_user.as_ref().unwrap().success == false {
-            return HttpResponse::NotFound().body("Invalid token");
-        }
-    } else {
-        return HttpResponse::NotAcceptable().body("An account is required to do this");
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
     }
 
     // make sure profile exists
@@ -446,28 +396,16 @@ pub async fn update_request(
 
 #[post("/api/auth/users/{name:.*?}/ban")]
 /// Ban user
-pub async fn ban_request(req: HttpRequest, data: web::Data<guppydb::AppData>) -> impl Responder {
+pub async fn ban_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl Responder {
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get token user
-    let token_cookie = req.cookie("__Secure-Token");
-    let token_user = if token_cookie.is_some() {
-        Option::Some(
-            data.db
-                .get_user_by_unhashed(token_cookie.as_ref().unwrap().value().to_string()) // if the user is returned, that means the ID is valid
-                .await,
-        )
-    } else {
-        Option::None
-    };
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
 
-    if token_user.is_some() {
-        // make sure user exists
-        if token_user.as_ref().unwrap().success == false {
-            return HttpResponse::NotFound().body("Invalid token");
-        }
-    } else {
-        return HttpResponse::NotAcceptable().body("An account is required to do this");
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
     }
 
     // make sure token_user is of role "staff"
@@ -483,12 +421,12 @@ pub async fn ban_request(req: HttpRequest, data: web::Data<guppydb::AppData>) ->
     }
 
     // ban user
-    let res: guppydb::DefaultReturn<Option<String>> = data.db.ban_user_by_name(name).await;
+    let res: db::DefaultReturn<Option<String>> = data.db.ban_user_by_name(name).await;
 
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string::<guppydb::DefaultReturn<Option<String>>>(&res).unwrap());
+        .body(serde_json::to_string::<db::DefaultReturn<Option<String>>>(&res).unwrap());
 }
 
 #[get("/api/auth/users/{name:.*}/followers")]
@@ -500,7 +438,7 @@ pub async fn followers_request(
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get followers
-    let res: DefaultReturn<Option<Vec<guppydb::Log>>> = data
+    let res: DefaultReturn<Option<Vec<db::Log>>> = data
         .db
         .get_user_followers(name.to_owned(), info.offset)
         .await;
@@ -508,7 +446,7 @@ pub async fn followers_request(
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string::<DefaultReturn<Option<Vec<guppydb::Log>>>>(&res).unwrap());
+        .body(serde_json::to_string::<DefaultReturn<Option<Vec<db::Log>>>>(&res).unwrap());
 }
 
 #[get("/api/auth/users/{name:.*}/following")]
@@ -520,7 +458,7 @@ pub async fn following_request(
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get following
-    let res: DefaultReturn<Option<Vec<guppydb::Log>>> = data
+    let res: DefaultReturn<Option<Vec<db::Log>>> = data
         .db
         .get_user_following(name.to_owned(), info.offset)
         .await;
@@ -528,7 +466,7 @@ pub async fn following_request(
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string::<DefaultReturn<Option<Vec<guppydb::Log>>>>(&res).unwrap());
+        .body(serde_json::to_string::<DefaultReturn<Option<Vec<db::Log>>>>(&res).unwrap());
 }
 
 #[get("/api/auth/users/{name:.*}/avatar")]
@@ -607,7 +545,7 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
         return HttpResponse::Ok()
             .append_header(("Content-Type", "application/json"))
             .body(
-                serde_json::to_string::<guppydb::RoleLevel>(&guppydb::RoleLevel {
+                serde_json::to_string::<db::RoleLevel>(&db::RoleLevel {
                     elevation: -1000,
                     name: String::from("anonymous"),
                     permissions: Vec::new(),
@@ -619,5 +557,37 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string::<guppydb::RoleLevel>(&res.payload.unwrap().level).unwrap());
+        .body(serde_json::to_string::<db::RoleLevel>(&res.payload.unwrap().level).unwrap());
+}
+
+#[post("/api/auth/users/{name:.*}/mail")]
+pub async fn create_mail_stream_request(
+    req: HttpRequest,
+    data: web::Data<AppData>,
+) -> impl Responder {
+    let name: String = req.match_info().get("name").unwrap().to_string();
+
+    // get token user
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
+
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
+    }
+
+    // ...
+    let res = data
+        .db
+        .create_mail_stream(&mut db::UserMailStreamIdentifier {
+            _is_user_mail_stream: true,
+            user1: token_user.unwrap().payload.unwrap().user.username,
+            user2: name,
+        })
+        .await;
+
+    // return
+    return HttpResponse::Ok()
+        .append_header(("Content-Type", "application/json"))
+        .body(serde_json::to_string(&res).unwrap());
 }
