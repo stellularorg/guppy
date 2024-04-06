@@ -5,7 +5,7 @@
     <main class="small flex flex-column align-center g-8">
         <div id="success" class="card border round" style="display: none"></div>
 
-        <div class="card secondary round border" style="width: 25rem" id="forms">
+        <div class="card secondary round border" style="width: 25rem; max-width: 100dvw;" id="forms">
             <div id="error" class="mdnote note-error full" style="display: none"></div>
 
             <form class="full flex flex-column g-4" action="/api/auth/login-st" id="login-user-st">
@@ -28,7 +28,7 @@
             </form>
         </div>
 
-        <a class="button round border" href="/d/auth/login?callback={{ callback }}" style="width: 25rem"
+        <a class="button round" href="/d/auth/login?callback={{ callback }}" style="width: 25rem; max-width: 100dvw;"
             id="switch-button">
             Use Account ID
         </a>
