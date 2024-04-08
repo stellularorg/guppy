@@ -3,7 +3,7 @@ name = "guppy"
 authors = ["hkau"]
 license = "MIT"
 
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -20,7 +20,7 @@ actix-files = "0.6.5"
 actix-web = "4.5.1"
 askama = "0.12.1"
 awc = { version = "3.4.0", features = ["rustls"] }
-dorsal = { version = "0.1.0", registry = "stellular", default-features = false } # crates: disable-check
+dorsal = { version = "0.1.1", registry = "stellular", default-features = false } # crates: disable-check
 comrak = "0.22.0"
 dotenv = "0.15.0"
 env_logger = "0.11.3"
