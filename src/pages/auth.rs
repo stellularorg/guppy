@@ -654,7 +654,7 @@ pub async fn user_settings_request(
     let base = base::get_base_values(token_cookie.is_some());
     let props = SettingsTemplate {
         profile: profile.clone().user,
-        metadata: profile.user.metadata,
+        metadata: profile.user.metadata.replace("/", "\\/"),
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,

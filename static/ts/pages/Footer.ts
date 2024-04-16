@@ -86,6 +86,13 @@ setTimeout(() => {
         ).toLocaleString();
 }, 50);
 
+// disabled="false"
+for (const element of Array.from(
+    document.querySelectorAll('[disabled="false"]')
+) as HTMLButtonElement[]) {
+    element.removeAttribute("disabled");
+}
+
 // disable "a"
 setTimeout(() => {
     for (const element of Array.from(
