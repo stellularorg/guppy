@@ -386,7 +386,7 @@ pub async fn profile_view_request(
             <div class=\"full flex justify-space-between align-center g-4\">
                 <b>Edit About</b>
         
-                <button class=\"guppy-primary round\">
+                <button class=\"theme:primary round\">
                     <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-save\"><path d=\"M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z\"/><polyline points=\"17 21 17 13 7 13 7 21\"/><polyline points=\"7 3 7 8 15 8\"/></svg>
                     Save
                 </button>
@@ -409,7 +409,7 @@ pub async fn profile_view_request(
     };
     
     let edit_about_button = if can_edit == true && edit_mode == false {
-        "<a class=\"button round guppy-primary\" href=\"?edit=true\">Edit About</a>"
+        "<a class=\"button round theme:primary\" href=\"?edit=true\">Edit About</a>"
     } else {
         ""
     };
@@ -431,8 +431,8 @@ pub async fn profile_view_request(
         {
             format!(
                 "<div class=\"flex flex-wrap g-4\">
-                    <button class=\"round guppy-primary\" id=\"mail-user\" data-endpoint=\"/api/auth/users/{}/mail\">Mail</button>
-                    <button class=\"round guppy-primary\" id=\"follow-user\" data-endpoint=\"/api/auth/users/{}/follow\">{}</button>
+                    <button class=\"round theme:primary\" id=\"mail-user\" data-endpoint=\"/api/auth/users/{}/mail\">Mail</button>
+                    <button class=\"round theme:primary\" id=\"follow-user\" data-endpoint=\"/api/auth/users/{}/follow\">{}</button>
                 </div>", 
                 user.username, 
                 user.username, 

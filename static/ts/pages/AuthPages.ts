@@ -45,7 +45,7 @@ if (register_form) {
             <p><b>Do not lose it!</b> This code is required for you to sign into your account, <b>it cannot be reset!</b></p>
             
             <hr />
-            <a href="${callback}?uid=${json.message}" class="button round guppy-primary">Continue</a>`;
+            <a href="${callback}?uid=${json.message}" class="button round theme:primary">Continue</a>`;
             forms.style.display = "none";
         }
     });
@@ -73,7 +73,7 @@ if (register_form) {
             success.innerHTML = `<p>Successfully logged into account.</p>
                 
                 <hr />
-                <a href="${callback}?uid=${json.message}" class="button round guppy-primary">Continue</a>`;
+                <a href="${callback}?uid=${json.message}" class="button round theme:primary">Continue</a>`;
             forms.style.display = "none";
 
             if (switch_button) {
@@ -105,7 +105,7 @@ if (register_form) {
             success.innerHTML = `<p>Successfully logged into account.</p>
                 
                 <hr />
-                <a href="${callback}?uid=${json.message}" class="button round guppy-primary">Continue</a>`;
+                <a href="${callback}?uid=${json.message}" class="button round theme:primary">Continue</a>`;
             forms.style.display = "none";
 
             if (switch_button) {

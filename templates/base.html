@@ -159,6 +159,40 @@
     </div>
 
     {{ body_embed|safe }}
+
+    <dialog id="terms">
+        <div style="width: 25rem; max-width: 100%;">
+            <h2 class="no-margin full text-center">Terms of Use</h2>
+
+            <hr />
+
+            <ul>
+                <li>This instance reserves the right to delete your account or any of its content whenever it is
+                    felt necessary by the instance owner.</li>
+                <li>
+                    This instance reserves the right to share your data with any service that you authorize your
+                    account with when logging in or registering an account.
+                    <ul>
+                        <li>This is not a permanent connection. Services are only given your account ID once.</li>
+                    </ul>
+                </li>
+                <li>The only data that is collected by this authentication service is data that you provide yourself
+                    (this being your username and any information you choose to share on your user profile). If any
+                    service using your account requires more than this data, they are expected to request your
+                    permission or input beforehand.</li>
+                <li>This instance may also list its own additional terms somewhere <a href="{{ info }}">here</a>.
+                </li>
+            </ul>
+
+            <hr />
+
+            <div class="full flex justify-right">
+                <a class="button round red" href="javascript:document.getElementById('terms').close();">
+                    Close
+                </a>
+            </div>
+        </div>
+    </dialog>
 </body>
 
 </html>

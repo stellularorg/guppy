@@ -26,7 +26,7 @@ export function user_settings(
 
             // USER ONLY - secondary token
             if (_type === "user" && current_property === "secondary_token") {
-                option_render = `<button class="button round guppy-primary" onclick="window.send_token_refresh_request();">Refresh Token</button>`;
+                option_render = `<button class="button round theme:primary" onclick="window.send_token_refresh_request();">Refresh Token</button>`;
 
                 (window as any).send_token_refresh_request = async () => {
                     const res = await fetch(

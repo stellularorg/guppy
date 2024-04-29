@@ -186,16 +186,6 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
     }
 }
 
-// events
-const onclick = Array.from(
-    document.querySelectorAll("[b_onclick]")
-) as HTMLElement[];
-
-for (const element of onclick) {
-    element.setAttribute("onclick", element.getAttribute("b_onclick")!);
-    element.removeAttribute("b_onclick");
-}
-
 // menus
 (globalThis as any).toggle_child_menu = (
     self: HTMLElement,
@@ -268,6 +258,19 @@ for (const element of Array.from(
     element.href = `${element.href}?callback=${encodeURIComponent(
         `${window.location.origin}/api/auth/callback`
     )}`;
+}
+
+// modal
+for (const element of Array.from(
+    document.querySelectorAll("[data-dialog]")
+) as HTMLAnchorElement[]) {
+    const dialog_element: HTMLDialogElement = document.getElementById(
+        element.getAttribute("data-dialog")!
+    ) as HTMLDialogElement;
+
+    element.addEventListener("click", () => {
+        dialog_element.showModal();
+    });
 }
 
 // default export
