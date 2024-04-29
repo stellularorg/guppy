@@ -70,7 +70,7 @@ pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl
     let id = body.uid.trim();
     let id_hashed = utility::hash(id.to_string());
 
-    let res = data
+    let res: DefaultReturn<Option<FullUser<String>>> = data
         .db
         .get_user_by_hashed(id_hashed) // if the user is returned, that means the ID is valid
         .await;
@@ -80,6 +80,13 @@ pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl
     } else {
         String::new()
     };
+
+    if res.success == false {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+            .append_header(("Content-Type", "application/json"))
+            .body(serde_json::to_string::<DefaultReturn<Option<FullUser<String>>>>(&res).unwrap());
+    }
 
     // return
     return HttpResponse::Ok()
@@ -112,6 +119,13 @@ pub async fn login_secondary_token(
     } else {
         String::new()
     };
+
+    if res.success == false {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+            .append_header(("Content-Type", "application/json"))
+            .body(serde_json::to_string::<DefaultReturn<Option<FullUser<String>>>>(&res).unwrap());
+    }
 
     // return
     return HttpResponse::Ok()

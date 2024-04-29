@@ -111,8 +111,8 @@ struct SettingsTemplate {
     body_embed: String,
 }
 
-#[get("/d/auth/register")]
-/// Available at "/d/auth/register"
+#[get("/flow/auth/register")]
+/// Available at "/flow/auth/register"
 /// Still renders even if `REGISTRATION_DISABLED` is present
 pub async fn register_request(
     req: HttpRequest,
@@ -137,8 +137,8 @@ pub async fn register_request(
         );
 }
 
-#[get("/d/auth/login")]
-/// Available at "/d/auth/login"
+#[get("/flow/auth/login")]
+/// Available at "/flow/auth/login"
 pub async fn login_request(
     req: HttpRequest,
     info: web::Query<CallbackQueryProps>,
@@ -162,8 +162,8 @@ pub async fn login_request(
         );
 }
 
-#[get("/d/auth/login-st")]
-/// Available at "/d/auth/login-st"
+#[get("/flow/auth/login-st")]
+/// Available at "/flow/auth/login-st"
 pub async fn login_secondary_token_request(
     req: HttpRequest,
     info: web::Query<CallbackQueryProps>,
