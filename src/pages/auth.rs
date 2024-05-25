@@ -20,6 +20,7 @@ struct LoginTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -32,6 +33,7 @@ struct RegisterTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -44,6 +46,7 @@ struct LoginSecondaryTokenTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -57,6 +60,7 @@ struct UserProfileTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -76,6 +80,7 @@ struct FollowersTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -90,6 +95,7 @@ struct FollowingTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -108,6 +114,7 @@ struct SettingsTemplate {
     auth_state: bool,
     bundlrs: String,
     puffer: String,
+    site_name: String,
     body_embed: String,
 }
 
@@ -130,6 +137,7 @@ pub async fn register_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                site_name: base.site_name,
                 body_embed: base.body_embed,
             }
             .render()
@@ -155,6 +163,7 @@ pub async fn login_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                site_name: base.site_name,
                 body_embed: base.body_embed,
             }
             .render()
@@ -180,6 +189,7 @@ pub async fn login_secondary_token_request(
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
                 puffer: base.puffer,
+                site_name: base.site_name,
                 body_embed: base.body_embed,
             }
             .render()
@@ -360,7 +370,7 @@ pub async fn profile_view_request(
         "<img
             class=\"avatar\"
             style=\"--size: {}px;\"
-            src=\"/api/auth/users/{}/avatar\"
+            src=\"/api/v1/auth/users/{}/avatar\"
         />",
         60, user.username
     );
@@ -382,7 +392,7 @@ pub async fn profile_view_request(
     
     let about = if edit_mode == true {
         // edit mode form
-        format!("<form id=\"edit-about\" class=\"flex flex-column g-4\" data-endpoint=\"/api/auth/users/{}/about\">
+        format!("<form id=\"edit-about\" class=\"flex flex-column g-4\" data-endpoint=\"/api/v1/auth/users/{}/about\">
             <div class=\"full flex justify-space-between align-center g-4\">
                 <b>Edit About</b>
         
@@ -431,10 +441,8 @@ pub async fn profile_view_request(
         {
             format!(
                 "<div class=\"flex flex-wrap g-4\">
-                    <button class=\"round theme:primary\" id=\"mail-user\" data-endpoint=\"/api/auth/users/{}/mail\">Mail</button>
-                    <button class=\"round theme:primary\" id=\"follow-user\" data-endpoint=\"/api/auth/users/{}/follow\">{}</button>
+                    <button class=\"round theme:primary\" id=\"follow-user\" data-endpoint=\"/api/v1/auth/users/{}/follow\">{}</button>
                 </div>", 
-                user.username, 
                 user.username, 
                 if is_following == false {
                     "Follow"
@@ -496,6 +504,7 @@ pub async fn profile_view_request(
         info: base.info,
         bundlrs: base.bundlrs,
         puffer: base.puffer,
+        site_name: base.site_name,
         body_embed: base.body_embed,
     };
 
@@ -549,6 +558,7 @@ pub async fn followers_request(
         info: base.info,
         bundlrs: base.bundlrs,
         puffer: base.puffer,
+        site_name: base.site_name,
         body_embed: base.body_embed,
     };
 
@@ -603,6 +613,7 @@ pub async fn following_request(
         info: base.info,
         bundlrs: base.bundlrs,
         puffer: base.puffer,
+        site_name: base.site_name,
         body_embed: base.body_embed,
     };
 
@@ -659,6 +670,7 @@ pub async fn user_settings_request(
         info: base.info,
         bundlrs: base.bundlrs,
         puffer: base.puffer,
+        site_name: base.site_name,
         body_embed: base.body_embed,
     };
 

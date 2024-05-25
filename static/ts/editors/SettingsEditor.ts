@@ -30,7 +30,7 @@ export function user_settings(
 
                 (window as any).send_token_refresh_request = async () => {
                     const res = await fetch(
-                        `/api/auth/users/${name}/secondary-token`,
+                        `/api/v1/auth/users/${name}/secondary-token`,
                         {
                             method: "POST",
                         }
@@ -87,7 +87,7 @@ export function user_settings(
         e.preventDefault();
 
         // user
-        const res = await fetch(`/api/auth/users/${name}/update`, {
+        const res = await fetch(`/api/v1/auth/users/${name}/update`, {
             method: "POST",
             body: JSON.stringify(metadata),
             headers: {

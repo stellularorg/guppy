@@ -119,7 +119,6 @@ async fn main() -> std::io::Result<()> {
             .service(crate::api::auth::update_request)
             .service(crate::api::auth::follow_request)
             .service(crate::api::auth::ban_request)
-            .service(crate::api::auth::create_mail_stream_request)
             // GET users
             .service(crate::api::auth::avatar_request)
             .service(crate::api::auth::followers_request)

@@ -10,9 +10,9 @@
 
     <title>{% block title %}{{ title }}{% endblock %}</title>
 
-    <meta name="theme-color" content="#ff9999" />
+    <meta name="theme-color" content="#b8d2f5" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="🐠 Guppy" />
+    <meta property="og:site_name" content="{{ site_name }}" />
 
     {% block head %}{% endblock %}
 
@@ -24,7 +24,7 @@
     <!-- global menu -->
     <div class="link-list" style="display: none; box-shadow: 2px 2px 4px hsla(0, 0%, 0%, 25%);" id="upper:globalmenu">
         <div class="option small full flex align-center g-4 justify-space-between">
-            <a href="/" style="color: inherit;"><b>Guppy</b></a>
+            <a href="/" style="color: inherit;"><b>{{ site_name }}</b></a>
 
             <a id="theme_button" href="javascript:window.toggle_theme()" title="Toggle Theme"
                 style="color: var(--text-color-faded);">
@@ -69,7 +69,8 @@
                 new
             </a>
 
-            <a href="/flow/auth/register" class="button green full round border justify-start" data-wants-redirect="true">
+            <a href="/flow/auth/register" class="button green full round border justify-start"
+                data-wants-redirect="true">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="lucide lucide-at-sign">
@@ -90,7 +91,7 @@
                 login
             </a>
             {% else %}
-            <a href="/api/auth/logout" class="button red full round border justify-start">
+            <a href="/api/v1/auth/logout" class="button red full round border justify-start">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="lucide lucide-log-out">
@@ -180,7 +181,8 @@
                     (this being your username and any information you choose to share on your user profile). If any
                     service using your account requires more than this data, they are expected to request your
                     permission or input beforehand.</li>
-                <li>This instance may also list its own additional terms somewhere <a href="{{ bundlrs }}{{ info }}">here</a>.
+                <li>This instance may also list its own additional terms somewhere <a
+                        href="{{ bundlrs }}{{ info }}">here</a>.
                 </li>
             </ul>
 

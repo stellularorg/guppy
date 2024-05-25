@@ -24,7 +24,7 @@ struct UpdateAboutInfo {
     about: String,
 }
 
-#[get("/api/auth/callback")]
+#[get("/api/v1/auth/callback")]
 /// We also accept the callback on Guppy, but it just redirects here
 pub async fn callback_request() -> impl Responder {
     // return
@@ -37,7 +37,7 @@ pub async fn callback_request() -> impl Responder {
         );
 }
 
-#[post("/api/auth/register")]
+#[post("/api/v1/auth/register")]
 pub async fn register(body: web::Json<RegisterInfo>, data: web::Data<AppData>) -> impl Responder {
     // if server disabled registration, return
     let disabled = crate::config::get_var("REGISTRATION_DISABLED");
@@ -65,7 +65,7 @@ pub async fn register(body: web::Json<RegisterInfo>, data: web::Data<AppData>) -
         .body(serde_json::to_string(&res).unwrap());
 }
 
-#[post("/api/auth/login")]
+#[post("/api/v1/auth/login")]
 pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl Responder {
     let id = body.uid.trim();
     let id_hashed = utility::hash(id.to_string());
@@ -101,7 +101,7 @@ pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl
         );
 }
 
-#[post("/api/auth/login-st")]
+#[post("/api/v1/auth/login-st")]
 pub async fn login_secondary_token(
     body: web::Json<LoginInfo>,
     data: web::Data<AppData>,
@@ -140,7 +140,7 @@ pub async fn login_secondary_token(
         );
 }
 
-#[get("/api/auth/logout")]
+#[get("/api/v1/auth/logout")]
 pub async fn logout(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
     let cookie = req.cookie("__Secure-Token");
 
@@ -164,7 +164,7 @@ pub async fn logout(req: HttpRequest, data: web::Data<AppData>) -> impl Responde
         .body("You have been signed out. You can now close this tab.");
 }
 
-#[post("/api/auth/users/{name:.*}/about")]
+#[post("/api/v1/auth/users/{name:.*}/about")]
 pub async fn edit_about_request(
     req: HttpRequest,
     body: web::Json<UpdateAboutInfo>,
@@ -242,7 +242,7 @@ pub async fn edit_about_request(
         .body(serde_json::to_string(&res).unwrap());
 }
 
-#[post("/api/auth/users/{name:.*}/secondary-token")]
+#[post("/api/v1/auth/users/{name:.*}/secondary-token")]
 pub async fn refresh_secondary_token_request(
     req: HttpRequest,
     data: web::Data<AppData>,
@@ -313,7 +313,7 @@ pub async fn refresh_secondary_token_request(
         );
 }
 
-#[post("/api/auth/users/{name:.*}/follow")]
+#[post("/api/v1/auth/users/{name:.*}/follow")]
 pub async fn follow_request(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
     let name: String = req.match_info().get("name").unwrap().to_string();
 
@@ -343,7 +343,7 @@ pub async fn follow_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
         .body(serde_json::to_string(&res).unwrap());
 }
 
-#[post("/api/auth/users/{name:.*}/update")]
+#[post("/api/v1/auth/users/{name:.*}/update")]
 pub async fn update_request(
     req: HttpRequest,
     body: web::Json<UserMetadata>,
@@ -408,7 +408,7 @@ pub async fn update_request(
         .body(serde_json::to_string(&res).unwrap());
 }
 
-#[post("/api/auth/users/{name:.*?}/ban")]
+#[post("/api/v1/auth/users/{name:.*?}/ban")]
 /// Ban user
 pub async fn ban_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl Responder {
     let name: String = req.match_info().get("name").unwrap().to_string();
@@ -443,7 +443,7 @@ pub async fn ban_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl
         .body(serde_json::to_string::<db::DefaultReturn<Option<String>>>(&res).unwrap());
 }
 
-#[get("/api/auth/users/{name:.*}/followers")]
+#[get("/api/v1/auth/users/{name:.*}/followers")]
 pub async fn followers_request(
     req: HttpRequest,
     data: web::Data<AppData>,
@@ -463,7 +463,7 @@ pub async fn followers_request(
         .body(serde_json::to_string::<DefaultReturn<Option<Vec<db::Log>>>>(&res).unwrap());
 }
 
-#[get("/api/auth/users/{name:.*}/following")]
+#[get("/api/v1/auth/users/{name:.*}/following")]
 pub async fn following_request(
     req: HttpRequest,
     data: web::Data<AppData>,
@@ -483,7 +483,7 @@ pub async fn following_request(
         .body(serde_json::to_string::<DefaultReturn<Option<Vec<db::Log>>>>(&res).unwrap());
 }
 
-#[get("/api/auth/users/{name:.*}/avatar")]
+#[get("/api/v1/auth/users/{name:.*}/avatar")]
 pub async fn avatar_request(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
     let name: String = req.match_info().get("name").unwrap().to_string();
 
@@ -547,7 +547,7 @@ pub async fn avatar_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
         .body(body);
 }
 
-#[get("/api/auth/users/{name:.*}/level")]
+#[get("/api/v1/auth/users/{name:.*}/level")]
 pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
     let name: String = req.match_info().get("name").unwrap().to_string();
 
@@ -572,36 +572,4 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
         .body(serde_json::to_string::<db::RoleLevel>(&res.payload.unwrap().level).unwrap());
-}
-
-#[post("/api/auth/users/{name:.*}/mail")]
-pub async fn create_mail_stream_request(
-    req: HttpRequest,
-    data: web::Data<AppData>,
-) -> impl Responder {
-    let name: String = req.match_info().get("name").unwrap().to_string();
-
-    // get token user
-    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
-
-    if token_user.is_none() {
-        return HttpResponse::NotAcceptable()
-            .append_header(("Content-Type", "text/plain"))
-            .body("An account is required to do this");
-    }
-
-    // ...
-    let res = data
-        .db
-        .create_mail_stream(&mut db::UserMailStreamIdentifier {
-            _is_user_mail_stream: true,
-            user1: token_user.unwrap().payload.unwrap().user.username,
-            user2: name,
-        })
-        .await;
-
-    // return
-    return HttpResponse::Ok()
-        .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string(&res).unwrap());
 }

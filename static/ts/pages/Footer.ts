@@ -186,16 +186,43 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
     }
 }
 
+// events
+const onclick = Array.from(
+    document.querySelectorAll("[b_onclick]")
+) as HTMLElement[];
+
+for (const element of onclick) {
+    element.setAttribute("onclick", element.getAttribute("b_onclick")!);
+    element.removeAttribute("b_onclick");
+}
+
 // menus
 (globalThis as any).toggle_child_menu = (
     self: HTMLElement,
     id: string,
-    bottom: boolean = true
+    bottom: boolean = true,
+    align_left: boolean = false,
+    invert: boolean = true
 ) => {
     // resolve button
     while (self.nodeName !== "BUTTON") {
         self = self.parentElement!;
     }
+
+    // if ((globalThis as any).current_menu) {
+    //     const menu = (globalThis as any).current_menu as [
+    //         HTMLElement,
+    //         HTMLElement,
+    //     ];
+
+    //     // hide current menu
+    //     menu[0].style.display === "none";
+    //     menu[1].style.removeProperty("background");
+    //     menu[1].style.filter = "unset";
+
+    //     // ...
+    //     (globalThis as any).current_menu = null;
+    // }
 
     // ...
     const menu: HTMLElement | null = document.querySelector(
@@ -203,6 +230,7 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
     ) as HTMLElement | null;
 
     if (menu) {
+        (globalThis as any).current_menu = [menu, self];
         self.classList.toggle("selected");
 
         if (menu.style.display === "none") {
@@ -215,12 +243,20 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
                 menu.style.bottom = `${rect.top + self.offsetTop}px`;
             }
 
+            if (align_left === true) {
+                menu.style.left = `${rect.left}px`;
+            }
+
             // show menu
             menu.style.display = "flex";
 
             // ...
-            self.style.background = "var(--background-surface)";
-            self.style.filter = "invert(1) grayscale(1)";
+            if (invert === true) {
+                self.style.background = "var(--background-surface)";
+                self.style.filter = "invert(1) grayscale(1)";
+            } else {
+                self.style.background = "var(--text-color)";
+            }
 
             // events
             menu.addEventListener("click", (event) => {
@@ -245,7 +281,7 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
             }, 100);
         } else if (menu.style.display === "flex") {
             menu.style.display = "none";
-            self.style.background = "inherit";
+            self.style.removeProperty("background");
             self.style.filter = "unset";
         }
     }
@@ -256,7 +292,7 @@ for (const element of Array.from(
     document.querySelectorAll('[data-wants-redirect="true"]')
 ) as HTMLAnchorElement[]) {
     element.href = `${element.href}?callback=${encodeURIComponent(
-        `${window.location.origin}/api/auth/callback`
+        `${window.location.origin}/api/v1/auth/callback`
     )}`;
 }
 
@@ -272,6 +308,20 @@ for (const element of Array.from(
         dialog_element.showModal();
     });
 }
+
+window.addEventListener("click", (e: any) => {
+    if (e.target.tagName !== "DIALOG") return;
+
+    const rect = e.target.getBoundingClientRect();
+
+    const clicked_in_dialog =
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width;
+
+    if (clicked_in_dialog === false) e.target.close();
+});
 
 // default export
 export default {};

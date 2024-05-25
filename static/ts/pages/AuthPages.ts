@@ -21,7 +21,7 @@ if (register_form) {
     // register
     register_form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const res = await fetch("/api/auth/register", {
+        const res = await fetch("/api/v1/auth/register", {
             method: "POST",
             body: JSON.stringify({
                 username: register_form.username.value,
@@ -53,7 +53,7 @@ if (register_form) {
     // login
     login_form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const res = await fetch("/api/auth/login", {
+        const res = await fetch("/api/v1/auth/login", {
             method: "POST",
             body: JSON.stringify({
                 uid: login_form.uid.value,
@@ -85,7 +85,7 @@ if (register_form) {
     // login (secondary token)
     login_st_form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const res = await fetch("/api/auth/login-st", {
+        const res = await fetch("/api/v1/auth/login-st", {
             method: "POST",
             body: JSON.stringify({
                 uid: login_st_form.uid.value,
