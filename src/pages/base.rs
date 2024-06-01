@@ -6,7 +6,6 @@ pub struct BaseTemplate {
     pub info: String,
     pub auth_state: bool,
     pub bundlrs: String,
-    pub puffer: String,
     pub site_name: String,
     pub body_embed: String,
 }
@@ -33,7 +32,6 @@ pub fn get_base_values(token_cookie: bool) -> BaseTemplate {
         info,
         auth_state: token_cookie,
         bundlrs: std::env::var("BUNDLRS_ROOT").unwrap_or(String::new()),
-        puffer: std::env::var("PUFFER_ROOT").unwrap_or(String::new()),
         site_name: std::env::var("SITE_NAME").unwrap_or("Guppy".to_string()),
         body_embed,
     }

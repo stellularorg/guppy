@@ -12,7 +12,6 @@ struct HomeTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -52,7 +51,6 @@ pub async fn home_request(req: HttpRequest, data: web::Data<db::AppData>) -> imp
                 info: base.info,
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
-                puffer: base.puffer,
                 site_name: base.site_name,
                 body_embed: base.body_embed,
             }

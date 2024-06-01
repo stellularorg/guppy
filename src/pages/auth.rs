@@ -19,7 +19,6 @@ struct LoginTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -32,7 +31,6 @@ struct RegisterTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -45,7 +43,6 @@ struct LoginSecondaryTokenTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -59,7 +56,6 @@ struct UserProfileTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -79,7 +75,6 @@ struct FollowersTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -94,7 +89,6 @@ struct FollowingTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -113,7 +107,6 @@ struct SettingsTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
-    puffer: String,
     site_name: String,
     body_embed: String,
 }
@@ -136,7 +129,6 @@ pub async fn register_request(
                 info: base.info,
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
-                puffer: base.puffer,
                 site_name: base.site_name,
                 body_embed: base.body_embed,
             }
@@ -162,7 +154,6 @@ pub async fn login_request(
                 info: base.info,
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
-                puffer: base.puffer,
                 site_name: base.site_name,
                 body_embed: base.body_embed,
             }
@@ -188,7 +179,6 @@ pub async fn login_secondary_token_request(
                 info: base.info,
                 auth_state: base.auth_state,
                 bundlrs: base.bundlrs,
-                puffer: base.puffer,
                 site_name: base.site_name,
                 body_embed: base.body_embed,
             }
@@ -197,6 +187,7 @@ pub async fn login_secondary_token_request(
         );
 }
 
+#[rustfmt::skip]
 pub fn profile_view_hb_template() -> String {
     String::from("<main class=\"small flex flex-column g-4\">
     <div id=\"error\" class=\"mdnote note-error full\" style=\"display: none\"></div>
@@ -280,6 +271,7 @@ pub fn profile_view_hb_template() -> String {
 </main>")
 }
 
+#[rustfmt::skip]
 #[get("/{username:.*}")]
 /// Available at "/{username}"
 // rustfmt left, we're on our own here
@@ -503,7 +495,6 @@ pub async fn profile_view_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer,
         site_name: base.site_name,
         body_embed: base.body_embed,
     };
@@ -557,7 +548,6 @@ pub async fn followers_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer,
         site_name: base.site_name,
         body_embed: base.body_embed,
     };
@@ -567,7 +557,6 @@ pub async fn followers_request(
         .append_header(("Content-Type", "text/html"))
         .body(props.render().unwrap());
 }
-
 
 #[get("/{username:.*}/following")]
 /// Available at "/{username}/following"
@@ -612,7 +601,6 @@ pub async fn following_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer,
         site_name: base.site_name,
         body_embed: base.body_embed,
     };
@@ -641,7 +629,8 @@ pub async fn user_settings_request(
     let profile = profile.payload.unwrap();
 
     // verify auth status
-    let (set_cookie, token_cookie, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
+    let (set_cookie, token_cookie, token_user) =
+        base::check_auth_status(req.clone(), data.clone()).await;
 
     if token_user.is_none() {
         return HttpResponse::NotAcceptable().body("An account is required to do this");
@@ -669,7 +658,6 @@ pub async fn user_settings_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
-        puffer: base.puffer,
         site_name: base.site_name,
         body_embed: base.body_embed,
     };

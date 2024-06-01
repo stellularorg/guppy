@@ -4,15 +4,15 @@ const forms: HTMLElement = document.getElementById("forms")!;
 const switch_button: HTMLElement = document.getElementById("switch-button")!;
 
 const register_form: HTMLFormElement | null = document.getElementById(
-    "register-user"
+    "register-user",
 ) as HTMLFormElement | null;
 
 const login_form: HTMLFormElement | null = document.getElementById(
-    "login-user"
+    "login-user",
 ) as HTMLFormElement | null;
 
 const login_st_form: HTMLFormElement | null = document.getElementById(
-    "login-user-st"
+    "login-user-st",
 ) as HTMLFormElement | null;
 
 const callback = document.getElementById("callback")!.innerText;

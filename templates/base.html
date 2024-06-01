@@ -1,200 +1,328 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            http-equiv="content-security-policy"
+            content="default-src 'self' blob:; img-src * data:; media-src *; font-src *; style-src 'unsafe-inline' 'self' blob: *; script-src 'self' 'unsafe-inline' blob: *; object-src 'self' blob: *; upgrade-insecure-requests; connect-src *; frame-src 'self' blob: data: *"
+        />
 
-    <meta http-equiv="content-security-policy"
-        content="default-src 'self' blob:; img-src * data:; media-src *; font-src *; style-src 'unsafe-inline' 'self' blob: *; script-src 'self' 'unsafe-inline' blob: *; object-src 'self' blob: *; upgrade-insecure-requests; connect-src *; frame-src 'self' blob: data: *" />
+        <title>{% block title %}{{ title }}{% endblock %}</title>
 
-    <title>{% block title %}{{ title }}{% endblock %}</title>
+        <meta name="theme-color" content="#b8d2f5" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="{{ site_name }}" />
 
-    <meta name="theme-color" content="#b8d2f5" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="{{ site_name }}" />
+        {% block head %}{% endblock %}
 
-    {% block head %}{% endblock %}
+        <link rel="stylesheet" href="/static/style.css" />
+        <script type="module" src="/static/js/Footer.js"></script>
+    </head>
 
-    <link rel="stylesheet" href="/static/style.css" />
-    <script type="module" src="/static/js/Footer.js"></script>
-</head>
+    <body>
+        <!-- global menu -->
+        <div
+            class="link-list"
+            style="display: none; box-shadow: 2px 2px 4px hsla(0, 0%, 0%, 25%)"
+            id="upper:globalmenu"
+        >
+            <div
+                class="option small full flex align-center g-4 justify-space-between"
+            >
+                <a href="/" style="color: inherit"><b>{{ site_name }}</b></a>
 
-<body>
-    <!-- global menu -->
-    <div class="link-list" style="display: none; box-shadow: 2px 2px 4px hsla(0, 0%, 0%, 25%);" id="upper:globalmenu">
-        <div class="option small full flex align-center g-4 justify-space-between">
-            <a href="/" style="color: inherit;"><b>{{ site_name }}</b></a>
+                <a
+                    id="theme_button"
+                    href="javascript:window.toggle_theme()"
+                    title="Toggle Theme"
+                    style="color: var(--text-color-faded)"
+                >
+                    <div id="theme-icon-sun" class="align-center">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-sun"
+                        >
+                            <circle cx="12" cy="12" r="4" />
+                            <path d="M12 2v2" />
+                            <path d="M12 20v2" />
+                            <path d="m4.93 4.93 1.41 1.41" />
+                            <path d="m17.66 17.66 1.41 1.41" />
+                            <path d="M2 12h2" />
+                            <path d="M20 12h2" />
+                            <path d="m6.34 17.66-1.41 1.41" />
+                            <path d="m19.07 4.93-1.41 1.41" />
+                        </svg>
+                    </div>
 
-            <a id="theme_button" href="javascript:window.toggle_theme()" title="Toggle Theme"
-                style="color: var(--text-color-faded);">
-                <div id="theme-icon-sun" class="align-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-sun">
+                    <div id="theme-icon-moon" class="align-center">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-moon"
+                        >
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                        </svg>
+                    </div>
+                </a>
+            </div>
+
+            <div class="option full flex flex-column g-4">
+                <h6 class="no-margin">LINKS</h6>
+
+                {% if auth_state == false %}
+                <a
+                    href="{{ bundlrs }}"
+                    class="button full round border justify-start"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-circle-plus"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M8 12h8" />
+                        <path d="M12 8v8" />
+                    </svg>
+                    new
+                </a>
+
+                <a
+                    href="/flow/auth/register"
+                    class="button green full round border justify-start"
+                    data-wants-redirect="true"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-at-sign"
+                    >
                         <circle cx="12" cy="12" r="4" />
-                        <path d="M12 2v2" />
-                        <path d="M12 20v2" />
-                        <path d="m4.93 4.93 1.41 1.41" />
-                        <path d="m17.66 17.66 1.41 1.41" />
-                        <path d="M2 12h2" />
-                        <path d="M20 12h2" />
-                        <path d="m6.34 17.66-1.41 1.41" />
-                        <path d="m19.07 4.93-1.41 1.41" />
+                        <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
                     </svg>
-                </div>
+                    register
+                </a>
 
-                <div id="theme-icon-moon" class="align-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-moon">
-                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                <a
+                    href="/flow/auth/login"
+                    class="button green full round border justify-start"
+                    data-wants-redirect="true"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-log-in"
+                    >
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" x2="3" y1="12" y2="12" />
                     </svg>
-                </div>
-            </a>
-        </div>
+                    login
+                </a>
+                {% else %}
+                <a
+                    href="/api/v1/auth/logout"
+                    class="button red full round border justify-start"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-log-out"
+                    >
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" x2="9" y1="12" y2="12" />
+                    </svg>
+                    logout
+                </a>
+                {% endif %}
+            </div>
 
-        <div class="option full flex flex-column g-4">
-            <h6 class="no-margin">LINKS</h6>
+            <div class="option full flex flex-column g-4">
+                <h6 class="no-margin">HELP</h6>
 
-            {% if auth_state == false %}
-            <a href="{{ bundlrs }}" class="button full round border justify-start">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-circle-plus">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M8 12h8" />
-                    <path d="M12 8v8" />
-                </svg>
-                new
-            </a>
+                <a
+                    href="{{ bundlrs }}{{ info }}"
+                    class="button full round border justify-start"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-info"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                    info
+                </a>
 
-            <a href="/flow/auth/register" class="button green full round border justify-start"
-                data-wants-redirect="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-at-sign">
-                    <circle cx="12" cy="12" r="4" />
-                    <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
-                </svg>
-                register
-            </a>
-
-            <a href="/flow/auth/login" class="button green full round border justify-start" data-wants-redirect="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-log-in">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                    <polyline points="10 17 15 12 10 7" />
-                    <line x1="15" x2="3" y1="12" y2="12" />
-                </svg>
-                login
-            </a>
-            {% else %}
-            <a href="/api/v1/auth/logout" class="button red full round border justify-start">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-log-out">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" x2="9" y1="12" y2="12" />
-                </svg>
-                logout
-            </a>
-            {% endif %}
-
-            <a href="{{ puffer }}" class="button full round border justify-start" style="display: none;">
-                puffer
-            </a>
-        </div>
-
-        <div class="option full flex flex-column g-4">
-            <h6 class="no-margin">HELP</h6>
-
-            <a href="{{ bundlrs }}{{ info }}" class="button full round border justify-start">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-info">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 16v-4" />
-                    <path d="M12 8h.01" />
-                </svg>
-                info
-            </a>
-
-            <a href="/api/docs/guppy/index.html" class="button full round border justify-start">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-braces">
-                    <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" />
-                    <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
-                </svg>
-                api
-            </a>
-        </div>
-    </div>
-
-    <!-- toolbar -->
-    <div class="toolbar flex justify-space-between">
-        <div class="flex">
-            <button title="Menu" onclick="window.toggle_child_menu(event.target, '#upper\\:globalmenu')"
-                style="border-left: 0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                    class="lucide lucide-menu">
-                    <line x1="4" x2="20" y1="12" y2="12" />
-                    <line x1="4" x2="20" y1="6" y2="6" />
-                    <line x1="4" x2="20" y1="18" y2="18" />
-                </svg>
-            </button>
-
-            {% block toolbar %}{% endblock %}
-        </div>
-
-        <div class="flex">{% block toolbar_right %}{% endblock %}</div>
-    </div>
-
-    <!-- page content -->
-    <div class="toolbar-layout-wrapper" id="_page">
-        {% block content %}{% endblock %}
-    </div>
-
-    {{ body_embed|safe }}
-
-    <dialog id="terms">
-        <div style="width: 25rem; max-width: 100%;">
-            <h2 class="no-margin full text-center">Terms of Use</h2>
-
-            <hr />
-
-            <ul>
-                <li>This instance reserves the right to delete your account or any of its content whenever it is
-                    felt necessary by the instance owner.</li>
-                <li>
-                    This instance reserves the right to share your data with any service that you authorize your
-                    account with when logging in or registering an account.
-                    <ul>
-                        <li>This is not a permanent connection. Services are only given your account ID once.</li>
-                    </ul>
-                </li>
-                <li>The only data that is collected by this authentication service is data that you provide yourself
-                    (this being your username and any information you choose to share on your user profile). If any
-                    service using your account requires more than this data, they are expected to request your
-                    permission or input beforehand.</li>
-                <li>This instance may also list its own additional terms somewhere <a
-                        href="{{ bundlrs }}{{ info }}">here</a>.
-                </li>
-            </ul>
-
-            <hr />
-
-            <div class="full flex justify-right">
-                <a class="button round red" href="javascript:document.getElementById('terms').close();">
-                    Close
+                <a
+                    href="/api/docs/guppy/index.html"
+                    class="button full round border justify-start"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-braces"
+                    >
+                        <path
+                            d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"
+                        />
+                        <path
+                            d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"
+                        />
+                    </svg>
+                    api
                 </a>
             </div>
         </div>
-    </dialog>
-</body>
 
+        <!-- toolbar -->
+        <div class="toolbar flex justify-space-between">
+            <div class="flex">
+                <button
+                    title="Menu"
+                    onclick="window.toggle_child_menu(event.target, '#upper\\:globalmenu')"
+                    style="border-left: 0"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-menu"
+                    >
+                        <line x1="4" x2="20" y1="12" y2="12" />
+                        <line x1="4" x2="20" y1="6" y2="6" />
+                        <line x1="4" x2="20" y1="18" y2="18" />
+                    </svg>
+                </button>
+
+                {% block toolbar %}{% endblock %}
+            </div>
+
+            <div class="flex">{% block toolbar_right %}{% endblock %}</div>
+        </div>
+
+        <!-- page content -->
+        <div class="toolbar-layout-wrapper" id="_page">
+            {% block content %}{% endblock %}
+        </div>
+
+        {{ body_embed|safe }}
+
+        <dialog id="terms">
+            <div style="width: 25rem; max-width: 100%">
+                <h2 class="no-margin full text-center">Terms of Use</h2>
+
+                <hr />
+
+                <ul>
+                    <li>
+                        This instance reserves the right to delete your account
+                        or any of its content whenever it is felt necessary by
+                        the instance owner.
+                    </li>
+                    <li>
+                        This instance reserves the right to share your data with
+                        any service that you authorize your account with when
+                        logging in or registering an account.
+                        <ul>
+                            <li>
+                                This is not a permanent connection. Services are
+                                only given your account ID once.
+                            </li>
+                        </ul>
+                    </li>
+                    <li>
+                        The only data that is collected by this authentication
+                        service is data that you provide yourself (this being
+                        your username and any information you choose to share on
+                        your user profile). If any service using your account
+                        requires more than this data, they are expected to
+                        request your permission or input beforehand.
+                    </li>
+                    <li>
+                        This instance may also list its own additional terms
+                        somewhere <a href="{{ bundlrs }}{{ info }}">here</a>.
+                    </li>
+                </ul>
+
+                <hr />
+
+                <div class="full flex justify-right">
+                    <a
+                        class="button round red"
+                        href="javascript:document.getElementById('terms').close();"
+                    >
+                        Close
+                    </a>
+                </div>
+            </div>
+        </dialog>
+    </body>
 </html>

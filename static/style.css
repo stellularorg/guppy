@@ -61,8 +61,8 @@
     --diff: 9%;
 
     /* main colors */
-    --primary: hsl(214, 75%, 84%);
-    --primary-low: hsl(214, 75%, 78%);
+    --primary: hsl(214, 100%, 75%);
+    --primary-low: hsl(214, 100%, 70%);
 
     --secondary: hsl(33, 75%, 84%);
     --secondary-low: hsl(33, 65%, 80%);
@@ -75,7 +75,7 @@
     /* default colors (dark) */
     --base-hue: 0;
     --base-sat: 0%;
-    --base-lit: 15%;
+    --base-lit: 12%;
 
     --mod: +;
     --diff: 0%;
@@ -106,7 +106,7 @@ a {
 /* button modifications */
 button,
 .button {
-    padding: var(--u-02) var(--u-08);
+    padding: var(--u-04) var(--u-08);
     height: 35px !important;
     min-height: 35px;
     user-select: none;
