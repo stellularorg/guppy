@@ -190,7 +190,6 @@ impl Database {
                     secondary_token: Option::None,
                     allow_mail: Option::Some(String::from("yes")),
                     nickname: Option::Some(username.clone()),
-                    page_template: Option::None,
                 })
                 .unwrap(),
             )

@@ -4,7 +4,6 @@ use crate::db::{self, AppData, FullUser, Log, UserMetadata, UserState};
 
 use super::base;
 use askama::Template;
-use serde_json::json;
 
 #[derive(Default, PartialEq, serde::Deserialize)]
 pub struct CallbackQueryProps {
@@ -51,7 +50,14 @@ struct LoginSecondaryTokenTemplate {
 #[template(path = "auth/user_profile.html")]
 struct UserProfileTemplate {
     user: UserState<String>,
-    page: String,
+    meta: UserMetadata,
+    user_nick: String,
+    can_edit: bool,
+    edit_mode: bool,
+    about: String,
+    is_following: bool,
+    followers_count: usize,
+    following_count: usize,
     // required fields (super::base)
     info: String,
     auth_state: bool,
@@ -187,91 +193,6 @@ pub async fn login_secondary_token_request(
         );
 }
 
-#[rustfmt::skip]
-pub fn profile_view_hb_template() -> String {
-    String::from("<main class=\"small flex flex-column g-4\">
-    <div id=\"error\" class=\"mdnote note-error full\" style=\"display: none\"></div>
-    <div id=\"success\" class=\"mdnote note-note full\" style=\"display: none\"></div>
-
-    <div
-        class=\"flex justify-space-between align-center mobile:flex-column g-4 flex-wrap\"
-    >
-        <div class=\"flex align-center g-4 flex-wrap\" style=\"max-width: 100%\">
-            {{{ avatar }}} {{{ username_display }}}
-        </div>
-
-        {{{ user_actions }}}
-    </div>
-
-    <div class=\"card secondary round\">
-        <div id=\"stats-or-info\" class=\"flex flex-column g-4\">
-            <details class=\"round border\" open>
-                <summary>Info</summary>
-
-                <table class=\"full\" style=\"margin: 0\">
-                    <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Value</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <tr>
-                            <td>Level</td>
-                            <td>{{{ level_badge }}}</td>
-                        </tr>
-                        <tr>
-                            <td>Joined</td>
-                            <td>
-                                <span class=\"date-time-to-localize\">
-                                    {{ user.timestamp }}
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </details>
-
-            <details class=\"round border\">
-                <summary>Statistics</summary>
-
-                <table class=\"full\" style=\"margin: 0\">
-                    <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Value</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        <tr>
-                            <td>Followers</td>
-                            <td>{{{ followers_button }}}</td>
-                        </tr>
-
-                        <tr>
-                            <td>Following</td>
-                            <td>{{{ following_button }}}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </details>
-        </div>
-
-        <hr />
-
-        <div class=\"flex flex-column g-4\">
-            <div class=\"card round\" id=\"description\">
-                {{{ about }}}
-                {{{ edit_about_button }}}
-            </div>
-        </div>
-    </div>
-</main>")
-}
-
-#[rustfmt::skip]
 #[get("/{username:.*}")]
 /// Available at "/{username}"
 // rustfmt left, we're on our own here
@@ -330,7 +251,7 @@ pub async fn profile_view_request(
             Option::None
         };
 
-    let follower_count = followers_res.payload;
+    let followers_count = followers_res.payload;
     let following_count = following_res.payload;
     let is_following = if is_following_res.is_some() {
         is_following_res.unwrap().payload.is_some()
@@ -353,150 +274,28 @@ pub async fn profile_view_request(
         Option::None
     };
 
-    // ...
-    let can_edit = active_user.is_some()
-        && active_user.as_ref().unwrap().username == user.username;
-    
-    // template
-    let avatar = format!(
-        "<img
-            class=\"avatar\"
-            style=\"--size: {}px;\"
-            src=\"/api/v1/auth/users/{}/avatar\"
-        />",
-        60, user.username
-    );
-    
-    let username_c = user.username.clone();
-    let username_display = format!(
-        "<div class=\"flex flex-column\" style=\"max-width: 100%; min-width: max-content\">
-            <h2 class=\"no-margin\" id=\"user-fake-name\" style=\"max-width: 100vw\">{}</h2>
-        
-            <span id=\"user-real-name\">{}</span>
-        </div>",
-        if meta.nickname.is_some() {
-            meta.nickname.as_ref().unwrap()
-        } else {
-            &username_c
-        },
-        user.username
-    );
-    
-    let about = if edit_mode == true {
-        // edit mode form
-        format!("<form id=\"edit-about\" class=\"flex flex-column g-4\" data-endpoint=\"/api/v1/auth/users/{}/about\">
-            <div class=\"full flex justify-space-between align-center g-4\">
-                <b>Edit About</b>
-        
-                <button class=\"theme:primary round\">
-                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-save\"><path d=\"M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z\"/><polyline points=\"17 21 17 13 7 13 7 21\"/><polyline points=\"7 3 7 8 15 8\"/></svg>
-                    Save
-                </button>
-            </div>
-        
-            <textarea
-                type=\"text\"
-                name=\"about\"
-                id=\"about\"
-                placeholder=\"About\"
-                class=\"full round\"
-                minlength=\"2\"
-                maxlength=\"200000\"
-                required
-            >{}</textarea>
-        </form>", user.username, meta.about)
-    } else {
-        // just show about
-        crate::markup::render(&meta.about.clone())
-    };
-    
-    let edit_about_button = if can_edit == true && edit_mode == false {
-        "<a class=\"button round theme:primary\" href=\"?edit=true\">Edit About</a>"
-    } else {
-        ""
-    };
-    
-    let followers_button = format!(
-        "<a href=\"/{}/followers\">{}</a>",
-        user.username, follower_count
-    );
-    
-    let following_button = format!(
-        "<a href=\"/{}/following\">{}</a>",
-        user.username, following_count
-    );
-    
-    let user_actions = format!(
-        "{}",
-        if (can_edit == false)
-            && (base.auth_state == true)
-        {
-            format!(
-                "<div class=\"flex flex-wrap g-4\">
-                    <button class=\"round theme:primary\" id=\"follow-user\" data-endpoint=\"/api/v1/auth/users/{}/follow\">{}</button>
-                </div>", 
-                user.username, 
-                if is_following == false {
-                    "Follow"
-                } else {
-                    "Unfollow"
-                }
-            )
-        } else {
-            String::new()
-        }
-    );
-    
-    let level_badge = format!("<span class=\"chip badge role-{}\">{}</span>", user.role, user.role);
-    
-    // render template
-    let default_template = &profile_view_hb_template();
-    let reg = handlebars::Handlebars::new();
-    let page = reg.render_template(
-        if meta.page_template.is_some() && !meta.page_template.as_ref().unwrap().is_empty() {
-            meta.page_template.as_ref().unwrap() // use provided template
-        } else {
-            default_template // use default template
-        },
-        &json!({
-            // user info
-            "username": user.username,
-            "about": about,
-            // components
-            "avatar": avatar,
-            "username_display": username_display,
-            "edit_about_button": edit_about_button,
-            "followers_button": followers_button,
-            "following_button": following_button,
-            "user_actions": user_actions,
-            "level_badge": level_badge,
-            // ...
-            "user": user,
-            "metadata": meta.clone()
-        }),
-    );
-
-    if page.is_err() {
-        return HttpResponse::NotAcceptable()
-            .append_header(("Content-Type", "text/plain"))
-            .body("Failed to render template");
-    }
-
-    // ...
-    // TODO: properly sanitize if needed
-    // rustfmt i miss you
-    let page =
-        page.unwrap().replace("fetch(", "fetch(\\");
+    let can_edit = active_user.is_some() && active_user.as_ref().unwrap().username == user.username;
 
     // ...
     let props = UserProfileTemplate {
         user,
-        page,
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
         site_name: base.site_name,
         body_embed: base.body_embed,
+        meta: meta.clone(),
+        user_nick: if meta.nickname.is_some() {
+            meta.nickname.as_ref().unwrap().to_string()
+        } else {
+            username_c
+        },
+        can_edit,
+        edit_mode,
+        about: crate::markup::render(&meta.about.clone()),
+        is_following,
+        followers_count,
+        following_count,
     };
 
     return HttpResponse::Ok()

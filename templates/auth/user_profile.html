@@ -1,10 +1,10 @@
 {% extends "../base.html" %} {% block title %}{{ user.username }}{% endblock %}
 {% block toolbar %}
-<a class="button" href="/{{ user.username }}" style="border-left: 0">
+<a class="button" href="/{{ user.username }}">
     {{ user.username }}
-    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem"
-        >{{ user.role }}</span
-    >
+    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem">
+        {{ user.role }}
+    </span>
 </a>
 {% endblock %} {% block head %}
 <meta property="og:title" content="{{ user.username }}" />
@@ -37,7 +37,135 @@
         Settings
     </a>
 </div>
-{% endif %} {% endblock %} {% block content%} {{ page|safe }}
+{% endif %} {% endblock %} {% block content%}
+<main class="small flex flex-column g-4">
+    <div id="error" class="mdnote note-error full" style="display: none"></div>
+    <div id="success" class="mdnote note-note full" style="display: none"></div>
+
+    <div class="card secondary round border">
+        <div class="flex flex-column g-8">
+            <div
+                class="flex align-center g-8 flex-wrap"
+                style="max-width: 100%"
+            >
+                <img
+                    class="avatar"
+                    style="--size: 60px"
+                    src="/api/v1/auth/users/{{ user.username }}/avatar"
+                />
+
+                <div
+                    class="flex flex-column"
+                    style="max-width: 100%; min-width: max-content"
+                >
+                    <h4
+                        class="no-margin"
+                        id="user-fake-name"
+                        style="max-width: 100vw"
+                    >
+                        {{ user_nick }}
+                    </h4>
+
+                    <span id="user-real-name">{{ user.username }}</span>
+                </div>
+            </div>
+
+            <div
+                id="stats-or-info"
+                class="flex full flex-wrap mobile:justify-center footernav g-4"
+            >
+                <div class="item" style="margin-left: 0">
+                    <a href="/{{ user.username }}/following">
+                        <b>{{ following_count }}</b>
+                        following
+                    </a>
+                </div>
+
+                <div class="item">
+                    <a href="/{{ user.username }}/followers">
+                        <b>{{ followers_count }}</b>
+                        followers
+                    </a>
+                </div>
+
+                {% if (can_edit == false) && (auth_state == true) %}
+                <div class="item">
+                    <button
+                        class="round secondary"
+                        id="follow-user"
+                        data-endpoint="/api/v1/auth/users/{{ user.username }}/follow"
+                        style="
+                            height: 25px !important;
+                            min-height: 25px !important;
+                        "
+                    >
+                        {% if is_following %} Unfollow {% else %} Follow {%
+                        endif %}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr />
+
+        <div class="card border round" id="description">
+            {% if edit_mode == true %}
+            <form
+                id="edit-about"
+                class="flex flex-column g-4"
+                data-endpoint="/api/v1/auth/users/{{ user.username }}/about"
+            >
+                <div class="full flex justify-space-between align-center g-4">
+                    <b>Edit About</b>
+
+                    <button class="theme:primary round">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-save"
+                        >
+                            <path
+                                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                            />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save
+                    </button>
+                </div>
+
+                <textarea
+                    type="text"
+                    name="about"
+                    id="about"
+                    placeholder="About"
+                    class="full round"
+                    minlength="2"
+                    maxlength="200000"
+                    required
+                >
+{{ meta.about }}</textarea
+                >
+            </form>
+            {% else %} {{ about|safe }} {% endif %}
+
+            <!-- prettier:ignore -->
+            {% if (can_edit == true) && (edit_mode == false) %}
+            <a class="button round theme:primary" href="?edit=true">
+                Edit About
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</main>
 
 <script type="module">
     import "/static/js/ProfileView.js";
