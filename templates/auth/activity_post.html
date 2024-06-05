@@ -8,7 +8,10 @@ endblock %} {% block toolbar %}
 </a>
 {% endblock %} {% block head %}
 <meta property="og:title" content="{{ user.username }}" />
-<meta property="og:description" content="Post {{ user.username }}'s activity" />
+<meta
+    property="og:description"
+    content="View post in {{ user.username }}'s activity"
+/>
 {% endblock %} {% block content%}
 <main class="small flex flex-column g-4">
     <div id="error" class="mdnote note-error full" style="display: none"></div>
@@ -85,6 +88,7 @@ endblock %} {% block toolbar %}
         <div class="flex justify-space-between align-center">
             <h6 class="no-margin">Replies</h6>
 
+            {% if auth_state == true %}
             <button
                 data-dialog="upper:compose"
                 class="button round theme:primary"
@@ -107,6 +111,7 @@ endblock %} {% block toolbar %}
                     <path d="M22 2 11 13" />
                 </svg>
             </button>
+            {% endif %}
         </div>
 
         {% for p in replies %} {% let post = p %}
