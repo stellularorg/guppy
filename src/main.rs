@@ -109,6 +109,9 @@ async fn main() -> std::io::Result<()> {
             // docs
             .service(fs::Files::new("/api/docs", "./target/doc").show_files_listing())
             // POST api
+            // POST activity
+            .service(crate::api::auth::post_activity_request)
+            .service(crate::api::auth::favorite_request)
             // POST auth
             .service(crate::api::auth::callback_request)
             .service(crate::api::auth::register)
@@ -135,6 +138,7 @@ async fn main() -> std::io::Result<()> {
             .service(crate::pages::auth::followers_request)
             .service(crate::pages::auth::following_request)
             .service(crate::pages::auth::user_settings_request)
+            .service(crate::pages::auth::view_post_request)
             .service(crate::pages::auth::profile_view_request)
     })
     .bind(("0.0.0.0", port))?

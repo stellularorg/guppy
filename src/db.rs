@@ -25,6 +25,35 @@ pub fn deserialize_userfollow(input: String) -> UserFollow {
     serde_json::from_str::<UserFollow>(&input).unwrap()
 }
 
+// activity feed
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ActivityPost {
+    pub id: String,
+    pub content: String,
+    pub content_html: String,
+    pub author: String,
+    #[serde(default)]
+    /// The ID of the post this post is replying to
+    pub reply: String,
+    pub timestamp: u128,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PostFavoriteLog {
+    /// the username of the user that favorited the post
+    pub user: String,
+    /// the id of the post that was favorited
+    pub id: String,
+}
+
+// propss
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct PCreatePost {
+    pub content: String,
+    pub author: String,
+    #[serde(default)]
+    pub reply: String,
+}
 // server
 #[derive(Clone)]
 pub struct Database {
@@ -65,6 +94,19 @@ impl Database {
                 logtype VARCHAR(1000000),
                 timestamp  VARCHAR(1000000),
                 content VARCHAR(1000000)
+            )",
+        )
+        .execute(c)
+        .await;
+
+        let _ = sqlquery(
+            "CREATE TABLE IF NOT EXISTS \"gup_posts\" (
+                id VARCHAR(1000000),
+                author VARCHAR(1000000),
+                content VARCHAR(1000000),
+                content_html VARCHAR(1000000),
+                reply VARCHAR(1000000),
+                timestamp VARCHAR(1000000)
             )",
         )
         .execute(c)
@@ -346,74 +388,6 @@ impl Database {
             payload: Option::Some(name),
         };
     }
-
-    /*
-    /// Create a new [`RoleLevel`] given various properties
-    ///
-    /// # Arguments:
-    /// * `props` - [`RoleLevel`]
-    pub async fn create_level(&self, props: &mut RoleLevel) -> DefaultReturn<RoleLevelLog> {
-        let p: &mut RoleLevel = props; // borrowed props
-
-        // make sure role does not exist
-        let existing: DefaultReturn<RoleLevelLog> = self.get_level_by_role(p.name.to_owned()).await;
-
-        if existing.success {
-            return existing;
-        }
-
-        // create role
-        let res = self
-            .create_log(
-                String::from("level"),
-                serde_json::to_string::<RoleLevel>(p).unwrap(),
-            )
-            .await;
-
-        // return
-        return DefaultReturn {
-            success: res.success,
-            message: res.message,
-            payload: RoleLevelLog {
-                id: if res.success {
-                    res.payload.unwrap()
-                } else {
-                    String::new()
-                },
-                level: p.to_owned(),
-            },
-        };
-    }
-
-    /// Delete an existing [`RoleLevel`] given its `name`
-    ///
-    /// # Arguments:
-    /// * `name` - [`RoleLevel`] `name` field
-    pub async fn delete_level(&self, props: &mut RoleLevel) -> DefaultReturn<Option<String>> {
-        let p: &mut RoleLevel = props; // borrowed props
-
-        // make sure role exists
-        let existing: DefaultReturn<RoleLevelLog> = self.get_level_by_role(p.name.to_owned()).await;
-
-        if !existing.success {
-            return DefaultReturn {
-                success: false,
-                message: String::from("Level does not exist"),
-                payload: Option::None,
-            };
-        }
-
-        // delete role
-        let res = self.delete_log(existing.payload.id.clone()).await;
-
-        // return
-        return DefaultReturn {
-            success: res.success,
-            message: res.message,
-            payload: Option::Some(existing.payload.id),
-        };
-    }
-    */
 
     // follows
 
@@ -706,5 +680,583 @@ impl Database {
                 serde_json::to_string::<UserFollow>(&p).unwrap(),
             )
             .await
+    }
+
+    // activity
+
+    // GET
+    /// Get all user activity posts by `username`
+    ///
+    /// # Arguments:
+    /// * `username` - [`String`]
+    /// * `offset` - optional value representing the SQL fetch offset
+    pub async fn get_user_activity(
+        &self,
+        username: String,
+        offset: Option<i32>,
+    ) -> DefaultReturn<Option<Vec<(ActivityPost, Vec<ActivityPost>, i32)>>> {
+        let offset = if offset.is_some() { offset.unwrap() } else { 0 };
+
+        // make sure user exists
+        let existing: DefaultReturn<Option<FullUser<String>>> = self
+            .get_user_by_username(username.to_owned().to_lowercase())
+            .await;
+
+        if existing.success == false {
+            return DefaultReturn {
+                success: false,
+                message: String::from("User does not exist"),
+                payload: Option::None,
+            };
+        }
+
+        // check in cache
+        let cached = self
+            .base
+            .cachedb
+            .get(format!(
+                "user-posts:{}:offset{}",
+                username.to_lowercase(),
+                offset
+            ))
+            .await;
+
+        if cached.is_some() {
+            // ...
+            let posts =
+                serde_json::from_str::<Vec<ActivityPost>>(cached.unwrap().as_str()).unwrap();
+
+            // get replies
+            let mut true_output: Vec<(ActivityPost, Vec<ActivityPost>, i32)> = Vec::new();
+            for post in posts {
+                let mut replies_out = Vec::new();
+                let post_id = post.clone().id;
+
+                // get replies
+                let replies = &self.get_post_replies(post_id.clone(), false).await;
+
+                if replies.payload.is_some() {
+                    for reply in replies.payload.clone().unwrap() {
+                        replies_out.push(reply);
+                    }
+                }
+
+                // get favorites
+                let favorites = &self.get_post_favorites(post_id).await;
+
+                // ...
+                true_output.push((post, replies_out, favorites.payload));
+                continue;
+            }
+
+            // ...
+            return DefaultReturn {
+                success: true,
+                message: String::from("Successfully fetched posts"),
+                payload: Option::Some(true_output),
+            };
+        }
+
+        // ...
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"gup_posts\" WHERE \"author\" = ? AND \"reply\" = '' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET ?"
+        } else {
+            "SELECT * FROM \"gup_posts\" WHERE \"author\" = $1  AND \"reply\" = '' ORDER BY \"timestamp\" DESC LIMIT 50 OFFSET $2"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
+            .bind::<&String>(&username)
+            .bind(offset)
+            .fetch_all(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Failed to fetch posts"),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let rows = res.unwrap();
+        let mut output: Vec<ActivityPost> = Vec::new();
+
+        for row in rows {
+            let row = self.base.textify_row(row).data;
+            output.push(ActivityPost {
+                id: row.get("id").unwrap().to_string(),
+                content: row.get("content").unwrap().to_string(),
+                content_html: row.get("content_html").unwrap().to_string(),
+                author: row.get("author").unwrap().to_string(),
+                reply: row.get("reply").unwrap().to_string(),
+                timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+            });
+        }
+
+        // store in cache
+        self.base
+            .cachedb
+            .set(
+                format!("user-posts:{}:offset{}", username.to_lowercase(), offset),
+                serde_json::to_string::<Vec<ActivityPost>>(&output).unwrap(),
+            )
+            .await;
+
+        // get true output
+        // we only pushed the original output to cache because replies are cached elsewhere
+        let mut true_output: Vec<(ActivityPost, Vec<ActivityPost>, i32)> = Vec::new();
+        for post in output {
+            let mut replies_out = Vec::new();
+            let post_id = post.clone().id;
+
+            // get replies
+            let replies = &self.get_post_replies(post_id.clone(), false).await;
+
+            for reply in replies.payload.clone().unwrap() {
+                replies_out.push(reply);
+            }
+
+            // get favorites
+            let favorites = &self.get_post_favorites(post_id).await;
+
+            // ...
+            true_output.push((post, replies_out, favorites.payload));
+            continue;
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Successfully fetched posts"),
+            payload: Option::Some(true_output),
+        };
+    }
+
+    /// Get all posts replying to another post by the `id` of the original post
+    ///
+    /// # Arguments:
+    /// * `id` - post id
+    /// * `run_existing_check` - if we should check that the log exists first
+    pub async fn get_post_replies(
+        &self,
+        id: String,
+        run_existing_check: bool,
+    ) -> DefaultReturn<Option<Vec<ActivityPost>>> {
+        // make sure post exists
+        if run_existing_check != false {
+            let existing: DefaultReturn<Option<ActivityPost>> =
+                self.get_post_by_id(id.to_owned()).await;
+
+            if existing.success == false {
+                return DefaultReturn {
+                    success: false,
+                    message: String::from("Post does not exist"),
+                    payload: Option::None,
+                };
+            }
+        }
+
+        // check in cache
+        let cached = self.base.cachedb.get(format!("post-replies:{}", id)).await;
+
+        if cached.is_some() {
+            // ...
+            let posts =
+                serde_json::from_str::<Vec<ActivityPost>>(cached.unwrap().as_str()).unwrap();
+
+            // ...
+            return DefaultReturn {
+                success: true,
+                message: String::from("Successfully fetched posts"),
+                payload: Option::Some(posts),
+            };
+        }
+
+        // ...
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"gup_posts\" WHERE \"reply\" = ? ORDER BY \"timestamp\" DESC LIMIT 100"
+        } else {
+            "SELECT * FROM \"gup_posts\" WHERE \"reply\" = $1 ORDER BY \"timestamp\" DESC LIMIT 100"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).fetch_all(c).await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Failed to fetch replies"),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let rows = res.unwrap();
+        let mut output: Vec<ActivityPost> = Vec::new();
+
+        for row in rows {
+            let row = self.base.textify_row(row).data;
+            output.push(ActivityPost {
+                id: row.get("id").unwrap().to_string(),
+                content: row.get("content").unwrap().to_string(),
+                content_html: row.get("content_html").unwrap().to_string(),
+                author: row.get("author").unwrap().to_string(),
+                reply: row.get("reply").unwrap().to_string(),
+                timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+            });
+        }
+
+        // store in cache
+        self.base
+            .cachedb
+            .set(
+                format!("post-replies:{}", id),
+                serde_json::to_string::<Vec<ActivityPost>>(&output).unwrap(),
+            )
+            .await;
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Successfully fetched replies"),
+            payload: Option::Some(output),
+        };
+    }
+
+    /// Get an [`ActivityPost`] by its id
+    ///
+    /// # Arguments:
+    /// * `id` - `String` of the post's `id`
+    pub async fn get_post_by_id(&self, id: String) -> DefaultReturn<Option<ActivityPost>> {
+        // check in cache
+        let cached = self.base.cachedb.get(format!("post:{}", id)).await;
+
+        if cached.is_some() {
+            // ...
+            let post = serde_json::from_str::<ActivityPost>(cached.unwrap().as_str()).unwrap();
+
+            // return
+            return DefaultReturn {
+                success: true,
+                message: String::from("Post exists (cache)"),
+                payload: Option::Some(post),
+            };
+        }
+
+        // ...
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"gup_posts\" WHERE \"id\" = ?"
+        } else {
+            "SELECT * FROM \"gup_posts\" WHERE \"id\" = $1"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).fetch_one(c).await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Post does not exist"),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let row = res.unwrap();
+        let row = self.base.textify_row(row).data;
+
+        // store in cache
+        let post = ActivityPost {
+            id: row.get("id").unwrap().to_string(),
+            content: row.get("content").unwrap().to_string(),
+            content_html: row.get("content_html").unwrap().to_string(),
+            author: row.get("author").unwrap().to_string(),
+            reply: row.get("reply").unwrap().to_string(),
+            timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+        };
+
+        self.base
+            .cachedb
+            .set(
+                format!("post:{}", id),
+                serde_json::to_string::<ActivityPost>(&post).unwrap(),
+            )
+            .await;
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Post exists"),
+            payload: Option::Some(post),
+        };
+    }
+
+    // SET
+    /// Create a new [`ActivityPost`]
+    ///
+    /// # Arguments:
+    /// * `props` - [`PCreatePost`]
+    /// * `as_user` - The ID of the user creating the post
+    pub async fn create_activity_post(
+        &self,
+        props: &mut PCreatePost,
+    ) -> DefaultReturn<Option<ActivityPost>> {
+        let p: &mut PCreatePost = props; // borrowed props
+
+        // check values
+
+        // (check length)
+        if (p.content.len() < 2) | (p.content.len() > 500) {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Content is invalid"),
+                payload: Option::None,
+            };
+        }
+
+        // make sure author exists
+        let existing: DefaultReturn<Option<FullUser<String>>> = self
+            .get_user_by_username(p.author.to_owned().to_lowercase())
+            .await;
+
+        if existing.success == false {
+            return DefaultReturn {
+                success: false,
+                message: String::from("User does not exist"),
+                payload: Option::None,
+            };
+        }
+
+        // create post
+        let post = ActivityPost {
+            id: dorsal::utility::random_id(),
+            author: p.author.clone(), // posts can only be created by user accounts
+            content: p.content.clone(),
+            content_html: crate::markup::render(&p.content),
+            reply: p.reply.clone(),
+            timestamp: dorsal::utility::unix_epoch_timestamp(),
+        };
+
+        // update cache
+        if p.reply.is_empty() {
+            // clear author activity feed
+            self.base
+                .cachedb
+                .remove_starting_with(format!("user-posts:{}:offset*", p.author.to_lowercase()))
+                .await;
+        } else {
+            // get post that we're replying to (and make sure it exists)
+            let replying_to = self.get_post_by_id(p.reply.clone()).await;
+
+            if replying_to.success == false {
+                return replying_to;
+            }
+
+            self.base
+                .cachedb
+                .remove(format!("post-replies:{}", p.reply))
+                .await;
+        }
+
+        // create
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "INSERT INTO \"gup_posts\" VALUES (?, ?, ?, ?, ?, ?)"
+        } else {
+            "INSERT INTO \"gup_posts\" VALUES ($1, $2, $3, $4, $5, $6)"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
+            .bind::<&String>(&post.id)
+            .bind::<&String>(&post.author)
+            .bind::<&String>(&post.content)
+            .bind::<&String>(&post.content_html)
+            .bind::<&String>(&post.reply)
+            .bind::<&String>(&post.timestamp.to_string())
+            .execute(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from(res.err().unwrap().to_string()),
+                payload: Option::None,
+            };
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Post created"),
+            payload: Option::Some(post),
+        };
+    }
+
+    // post favorites
+
+    // GET
+    /// Get the number of [`PostFavoriteLog`]s an [`ActivityPost`] has
+    pub async fn get_post_favorites(&self, id: String) -> DefaultReturn<i32> {
+        // get post
+        let existing = self.get_post_by_id(id.clone()).await;
+
+        if existing.success == false {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Post does not exist!"),
+                payload: 0,
+            };
+        }
+
+        // get favorites
+        DefaultReturn {
+            success: true,
+            message: id.clone(),
+            // favorites are stored in the "Logs" table AS WELL AS an incremented value in the cache,
+            // we read the value from cache when checking the paste's favorites, but read the cache value when fetching number
+            payload: self
+                .base
+                .cachedb
+                .get(format!("social:post-favorites:{}", id))
+                .await
+                .unwrap_or(String::from("0"))
+                .parse::<i32>()
+                .unwrap(),
+        }
+    }
+
+    /// Check if a user has favorited a post
+    pub async fn get_user_post_favorite(
+        &self,
+        user: String,
+        post_id: String,
+        skip_existing_check: bool,
+    ) -> DefaultReturn<Option<Log>> {
+        // get paste
+        if skip_existing_check == false {
+            let existing = self.get_post_by_id(post_id.clone()).await;
+
+            if existing.success == false {
+                return DefaultReturn {
+                    success: false,
+                    message: String::from("Post does not exist!"),
+                    payload: Option::None,
+                };
+            }
+        }
+
+        // ...
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"Logs\" WHERE \"content\" = ? AND \"logtype\" = 'post_favorite'"
+        } else {
+            "SELECT * FROM \"Logs\" WHERE \"content\" = $1 AND \"logtype\" = 'post_favorite'"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query)
+            .bind::<&String>(
+                &serde_json::to_string::<PostFavoriteLog>(&PostFavoriteLog {
+                    user,
+                    id: post_id.clone(),
+                })
+                .unwrap(),
+            )
+            .fetch_one(c)
+            .await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from(res.err().unwrap().to_string()),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let row = res.unwrap();
+        let row = self.base.textify_row(row).data;
+
+        DefaultReturn {
+            success: true,
+            message: post_id,
+            payload: Option::Some(Log {
+                id: row.get("id").unwrap().to_string(),
+                logtype: row.get("logtype").unwrap().to_string(),
+                timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+                content: row.get("content").unwrap().to_string(),
+            }),
+        }
+    }
+
+    // SET
+    /// Toggle a [`PostFavoriteLog`] on a [`ActivityPost`] by `user` and `post_id`
+    pub async fn toggle_user_post_favorite(
+        &self,
+        user: String,
+        post_id: String,
+    ) -> DefaultReturn<Option<String>> {
+        // get paste
+        let existing = self.get_post_by_id(post_id.clone()).await;
+
+        if existing.success == false {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Post does not exist!"),
+                payload: Option::None,
+            };
+        }
+
+        // check if user is paste owner
+        let existing = existing.payload.unwrap();
+
+        if existing.author == user {
+            return DefaultReturn {
+                success: false,
+                message: String::from("You're the post author!"),
+                payload: Option::None,
+            };
+        }
+
+        // attempt to get the user's existing favorite
+        let existing_favorite = self
+            .get_user_post_favorite(user.clone(), post_id.clone(), true)
+            .await;
+
+        // delete existing
+        if existing_favorite.success == true {
+            let payload = existing_favorite.payload.unwrap();
+
+            // decr favorites
+            self.base
+                .cachedb
+                .decr(format!("social:post-favorites:{}", post_id.clone()))
+                .await;
+
+            // handle log
+            return self.logs.delete_log(payload.id).await;
+        }
+        // add new
+        else {
+            // incr favorites
+            self.base
+                .cachedb
+                .incr(format!("social:post-favorites:{}", post_id.clone()))
+                .await;
+
+            // handle log
+            return self
+                .logs
+                .create_log(
+                    String::from("post_favorite"),
+                    serde_json::to_string::<PostFavoriteLog>(&PostFavoriteLog {
+                        user,
+                        id: post_id,
+                    })
+                    .unwrap(),
+                )
+                .await;
+        }
     }
 }

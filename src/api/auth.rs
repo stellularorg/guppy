@@ -573,3 +573,63 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
         .append_header(("Content-Type", "application/json"))
         .body(serde_json::to_string::<db::RoleLevel>(&res.payload.unwrap().level).unwrap());
 }
+
+// activity
+#[post("/api/v1/activity")]
+pub async fn post_activity_request(
+    req: HttpRequest,
+    body: web::Json<db::PCreatePost>,
+    data: web::Data<AppData>,
+) -> impl Responder {
+    // get token user
+    let (_, _, token_user) = crate::pages::base::check_auth_status(req, data.clone()).await;
+
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable()
+            .append_header(("Content-Type", "text/plain"))
+            .body("An account is required to do this");
+    }
+
+    let token_user = token_user.unwrap().payload.unwrap();
+
+    // create props
+    let mut props = body.clone();
+    props.author = token_user.user.username;
+
+    // post activity
+    let res = data.db.create_activity_post(&mut props).await;
+
+    // return
+    return HttpResponse::Ok()
+        .append_header(("Content-Type", "application/json"))
+        .body(serde_json::to_string(&res).unwrap());
+}
+
+#[post("/api/v1/activity/{id:.*}/favorite")]
+/// Toggle a post favorite
+pub async fn favorite_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl Responder {
+    let post_id = req.match_info().get("id").unwrap();
+
+    // verify auth status
+    let (set_cookie, _, token_user) =
+        crate::pages::base::check_auth_status(req.clone(), data.clone()).await;
+
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable().body("An account is required to favorite posts.");
+    }
+
+    // ...
+    let res = data
+        .db
+        .toggle_user_post_favorite(
+            token_user.unwrap().payload.unwrap().user.username,
+            post_id.to_string(),
+        )
+        .await;
+
+    // return
+    return HttpResponse::Ok()
+        .append_header(("Content-Type", "application/json"))
+        .append_header(("Set-Cookie", set_cookie))
+        .body(serde_json::to_string(&res).unwrap());
+}

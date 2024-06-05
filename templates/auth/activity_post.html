@@ -1,0 +1,214 @@
+{% extends "../base.html" %} {% block title %}{{ user.username }}'s activity{%
+endblock %} {% block toolbar %}
+<a class="button" href="/{{ user.username }}">
+    {{ user.username }}
+    <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem">
+        {{ user.role }}
+    </span>
+</a>
+{% endblock %} {% block head %}
+<meta property="og:title" content="{{ user.username }}" />
+<meta property="og:description" content="Post {{ user.username }}'s activity" />
+{% endblock %} {% block content%}
+<main class="small flex flex-column g-4">
+    <div id="error" class="mdnote note-error full" style="display: none"></div>
+    <div id="success" class="mdnote note-note full" style="display: none"></div>
+
+    <!-- main post -->
+    <div
+        class="card full secondary round flex g-8 post"
+        id="post-{{ post.id }}"
+    >
+        <!-- avatar -->
+        <img
+            class="avatar"
+            style="--size: 50px"
+            src="/api/v1/auth/users/{{ post.author }}/avatar"
+        />
+
+        <!-- author and content -->
+        <div class="flex flex-column g-4 full">
+            <!-- author -->
+            <div class="post_info footernav">
+                <div class="item" style="margin-left: 0">
+                    <a href="/{{ post.author }}">
+                        <b>{{ post.author }}</b>
+                    </a>
+                </div>
+
+                <div class="item">
+                    <span style="opacity: 75%" class="date-time-to-localize">
+                        {{ post.timestamp }}
+                    </span>
+                </div>
+            </div>
+            <!-- content -->
+            <div class="post_content full">{{ post.content_html|safe }}</div>
+            <!-- actions -->
+            <div class="post_actions footernav full justify-right">
+                <div class="item" style="margin-left: 0">
+                    <a
+                        class="flex align-center g-4"
+                        href="javascript:window.favorite_post('{{ post.id }}')"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-thumbs-up"
+                        >
+                            <path d="M7 10v12" />
+                            <path
+                                d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"
+                            />
+                        </svg>
+                        {{ favorites_count }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- replies -->
+    <hr />
+
+    <div
+        class="card full secondary border round flex flex-column g-4"
+        id="feed"
+    >
+        <div class="flex justify-space-between align-center">
+            <h6 class="no-margin">Replies</h6>
+
+            <button
+                data-dialog="upper:compose"
+                class="button round theme:primary"
+                title="New"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="lucide lucide-send"
+                    aria-label="Paper airplane symbol"
+                >
+                    <path d="m22 2-7 20-4-9-9-4Z" />
+                    <path d="M22 2 11 13" />
+                </svg>
+            </button>
+        </div>
+
+        {% for p in replies %} {% let post = p %}
+        <div class="card full round flex g-8 post" id="post-{{ post.id }}">
+            <!-- avatar -->
+            <img
+                class="avatar"
+                style="--size: 50px"
+                src="/api/v1/auth/users/{{ post.author }}/avatar"
+            />
+
+            <!-- author and content -->
+            <div class="flex flex-column g-4 full">
+                <!-- author -->
+                <div class="post_info footernav">
+                    <div class="item" style="margin-left: 0">
+                        <a href="/{{ post.author }}">
+                            <b>{{ post.author }}</b>
+                        </a>
+                    </div>
+
+                    <div class="item">
+                        <span
+                            style="opacity: 75%"
+                            class="date-time-to-localize"
+                        >
+                            {{ post.timestamp }}
+                        </span>
+                    </div>
+                </div>
+                <!-- content -->
+                <div class="post_content full">
+                    {{ post.content_html|safe }}
+                </div>
+                <!-- actions -->
+                <div class="post_actions footernav full justify-right">
+                    <div class="item" style="">
+                        <a
+                            class="flex align-center g-4"
+                            href="/{{ post.author }}/activity/{{ post.id }}"
+                        >
+                            Expand
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <style>
+            .post_content p {
+                margin-bottom: 0 !important;
+            }
+        </style>
+    </div>
+</main>
+
+<script type="module">
+    import "/static/js/ProfileView.js";
+</script>
+
+<!-- dialogs -->
+<dialog id="upper:compose">
+    <div style="width: 25rem; max-width: 100%">
+        <form
+            class="full flex flex-column g-4"
+            id="compose_activity"
+            data-endpoint="/api/v1/activity"
+            data-reply="true"
+        >
+            <label for="content"><b>Content</b></label>
+
+            <textarea
+                maxlength="500"
+                required
+                name="content"
+                id="content"
+                class="round"
+                placeholder="Post Content"
+            ></textarea>
+
+            <input
+                required
+                value="{{ post.id }}"
+                style="display: none"
+                name="reply"
+                id="reply"
+            />
+
+            <button class="round theme:primary">Post</button>
+        </form>
+
+        <hr />
+
+        <div class="full flex justify-right g-4">
+            <a
+                class="button round red"
+                href="javascript:document.getElementById('upper:compose').close();"
+            >
+                Close
+            </a>
+        </div>
+    </div>
+</dialog>
+{% call super() %} {% endblock %}

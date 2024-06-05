@@ -58,6 +58,9 @@ struct UserProfileTemplate {
     is_following: bool,
     followers_count: usize,
     following_count: usize,
+    // activity stuff
+    activity: Vec<(db::ActivityPost, Vec<db::ActivityPost>, i32)>,
+    offset: i32,
     // required fields (super::base)
     info: String,
     auth_state: bool,
@@ -69,6 +72,23 @@ struct UserProfileTemplate {
 #[derive(Default, PartialEq, serde::Deserialize)]
 pub struct QueryProps {
     pub edit: Option<bool>,
+    pub offset: Option<i32>,
+}
+
+#[derive(Template)]
+#[template(path = "auth/activity_post.html")]
+struct ViewPostTemplate {
+    user: UserState<String>,
+    // post stuff
+    post: db::ActivityPost,
+    replies: Vec<db::ActivityPost>,
+    favorites_count: i32,
+    // required fields (super::base)
+    info: String,
+    auth_state: bool,
+    bundlrs: String,
+    site_name: String,
+    body_embed: String,
 }
 
 #[derive(Template)]
@@ -195,7 +215,6 @@ pub async fn login_secondary_token_request(
 
 #[get("/{username:.*}")]
 /// Available at "/{username}"
-// rustfmt left, we're on our own here
 pub async fn profile_view_request(
     req: HttpRequest,
     data: web::Data<AppData>,
@@ -276,6 +295,15 @@ pub async fn profile_view_request(
 
     let can_edit = active_user.is_some() && active_user.as_ref().unwrap().username == user.username;
 
+    // activity
+    let posts_res: Vec<(db::ActivityPost, Vec<db::ActivityPost>, i32)> = data
+        .db
+        .get_user_activity(username_c.clone(), info.offset)
+        .await
+        .payload
+        // this really *probably* won't fail
+        .unwrap();
+
     // ...
     let props = UserProfileTemplate {
         user,
@@ -296,6 +324,76 @@ pub async fn profile_view_request(
         is_following,
         followers_count,
         following_count,
+        // activity
+        activity: posts_res,
+        offset: if info.offset.is_some() {
+            info.offset.unwrap()
+        } else {
+            0
+        },
+    };
+
+    return HttpResponse::Ok()
+        .append_header(("Set-Cookie", set_cookie))
+        .append_header(("Content-Type", "text/html"))
+        .body(props.render().unwrap());
+}
+
+#[get("/{username:.*}/activity/{id}")]
+/// Available at "/{username}/activity/{id}"
+pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
+    let post_id: String = req.match_info().get("id").unwrap().to_string();
+    let username: String = req.match_info().get("username").unwrap().to_string();
+
+    // get user
+    let user: db::DefaultReturn<Option<FullUser<String>>> =
+        data.db.get_user_by_username(username).await;
+
+    if user.success == false {
+        return HttpResponse::NotFound()
+            .append_header(("Content-Type", "text/plain"))
+            .body("404: Not Found");
+    }
+
+    let unwrap = user.payload.as_ref().unwrap();
+
+    // verify auth status
+    let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
+
+    // ...
+    let base = base::get_base_values(req.cookie("__Secure-Token").is_some());
+    let user = unwrap.clone().user;
+
+    // get post
+    let post = data.db.get_post_by_id(post_id.clone()).await;
+
+    if post.success == false {
+        return HttpResponse::NotFound()
+            .append_header(("Content-Type", "text/plain"))
+            .body("404: Not Found");
+    }
+
+    // activity
+    let posts_res: Vec<db::ActivityPost> = data
+        .db
+        .get_post_replies(post_id.clone(), false)
+        .await
+        .payload
+        // this really *probably* won't fail
+        .unwrap();
+
+    // ...
+    let props = ViewPostTemplate {
+        user,
+        auth_state: base.auth_state,
+        info: base.info,
+        bundlrs: base.bundlrs,
+        site_name: base.site_name,
+        body_embed: base.body_embed,
+        // post
+        post: post.payload.unwrap(),
+        replies: posts_res,
+        favorites_count: data.db.get_post_favorites(post_id).await.payload,
     };
 
     return HttpResponse::Ok()
