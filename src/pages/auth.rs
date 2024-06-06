@@ -26,6 +26,7 @@ struct LoginTemplate {
 #[template(path = "auth/register.html")]
 struct RegisterTemplate {
     callback: String,
+    invite_code_required: bool,
     // required fields (super::base)
     info: String,
     auth_state: bool,
@@ -81,7 +82,7 @@ struct ViewPostTemplate {
     user: UserState<String>,
     // post stuff
     post: db::ActivityPost,
-    replies: Vec<db::ActivityPost>,
+    replies: Vec<(db::ActivityPost, Vec<db::ActivityPost>, i32)>,
     favorites_count: i32,
     // required fields (super::base)
     info: String,
@@ -144,6 +145,8 @@ pub async fn register_request(
     req: HttpRequest,
     info: web::Query<CallbackQueryProps>,
 ) -> impl Responder {
+    let invite_codes = crate::config::get_var("INVITE_CODES");
+
     // ...
     let base = base::get_base_values(req.cookie("__Secure-Token").is_some());
     return HttpResponse::Ok()
@@ -151,6 +154,7 @@ pub async fn register_request(
         .body(
             RegisterTemplate {
                 callback: info.callback.clone(),
+                invite_code_required: invite_codes.is_some(),
                 // required fields
                 info: base.info,
                 auth_state: base.auth_state,
@@ -374,9 +378,9 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
     }
 
     // activity
-    let posts_res: Vec<db::ActivityPost> = data
+    let posts_res = data
         .db
-        .get_post_replies(post_id.clone(), false)
+        .get_post_replies_full(post_id.clone(), false)
         .await
         .payload
         // this really *probably* won't fail

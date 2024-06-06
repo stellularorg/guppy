@@ -83,7 +83,7 @@ setTimeout(() => {
     ) as HTMLElement[])
         element.innerText = new Date(
             parseInt(element.innerText)
-        ).toLocaleString();
+        ).toLocaleDateString();
 }, 50);
 
 // disabled="false"

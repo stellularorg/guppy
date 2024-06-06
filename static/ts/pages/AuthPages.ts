@@ -25,6 +25,8 @@ if (register_form) {
             method: "POST",
             body: JSON.stringify({
                 username: register_form.username.value,
+                invite_code: (register_form.invite_code || { value: undefined })
+                    .value,
             }),
             headers: {
                 "Content-Type": "application/json",

@@ -925,6 +925,142 @@ impl Database {
         };
     }
 
+    /// Get all posts replying to another post by the `id` of the original post
+    ///
+    /// # Arguments:
+    /// * `id` - post id
+    /// * `run_existing_check` - if we should check that the log exists first
+    pub async fn get_post_replies_full(
+        &self,
+        id: String,
+        run_existing_check: bool,
+    ) -> DefaultReturn<Option<Vec<(ActivityPost, Vec<ActivityPost>, i32)>>> {
+        // make sure post exists
+        if run_existing_check != false {
+            let existing: DefaultReturn<Option<ActivityPost>> =
+                self.get_post_by_id(id.to_owned()).await;
+
+            if existing.success == false {
+                return DefaultReturn {
+                    success: false,
+                    message: String::from("Post does not exist"),
+                    payload: Option::None,
+                };
+            }
+        }
+
+        // check in cache
+        let cached = self.base.cachedb.get(format!("post-replies:{}", id)).await;
+
+        if cached.is_some() {
+            // ...
+            let posts =
+                serde_json::from_str::<Vec<ActivityPost>>(cached.unwrap().as_str()).unwrap();
+
+            // get replies
+            let mut true_output: Vec<(ActivityPost, Vec<ActivityPost>, i32)> = Vec::new();
+            for post in posts {
+                let mut replies_out = Vec::new();
+                let post_id = post.clone().id;
+
+                // get replies
+                let replies = &self.get_post_replies(post_id.clone(), false).await;
+
+                if replies.payload.is_some() {
+                    for reply in replies.payload.clone().unwrap() {
+                        replies_out.push(reply);
+                    }
+                }
+
+                // get favorites
+                let favorites = &self.get_post_favorites(post_id).await;
+
+                // ...
+                true_output.push((post, replies_out, favorites.payload));
+                continue;
+            }
+
+            // ...
+            return DefaultReturn {
+                success: true,
+                message: String::from("Successfully fetched posts"),
+                payload: Option::Some(true_output),
+            };
+        }
+
+        // ...
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "SELECT * FROM \"gup_posts\" WHERE \"reply\" = ? ORDER BY \"timestamp\" DESC LIMIT 100"
+        } else {
+            "SELECT * FROM \"gup_posts\" WHERE \"reply\" = $1 ORDER BY \"timestamp\" DESC LIMIT 100"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).fetch_all(c).await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("Failed to fetch replies"),
+                payload: Option::None,
+            };
+        }
+
+        // ...
+        let rows = res.unwrap();
+        let mut output: Vec<ActivityPost> = Vec::new();
+
+        for row in rows {
+            let row = self.base.textify_row(row).data;
+            output.push(ActivityPost {
+                id: row.get("id").unwrap().to_string(),
+                content: row.get("content").unwrap().to_string(),
+                content_html: row.get("content_html").unwrap().to_string(),
+                author: row.get("author").unwrap().to_string(),
+                reply: row.get("reply").unwrap().to_string(),
+                timestamp: row.get("timestamp").unwrap().parse::<u128>().unwrap(),
+            });
+        }
+
+        // store in cache
+        self.base
+            .cachedb
+            .set(
+                format!("post-replies:{}", id),
+                serde_json::to_string::<Vec<ActivityPost>>(&output).unwrap(),
+            )
+            .await;
+
+        // get true output
+        // we only pushed the original output to cache because replies are cached elsewhere
+        let mut true_output: Vec<(ActivityPost, Vec<ActivityPost>, i32)> = Vec::new();
+        for post in output {
+            let mut replies_out = Vec::new();
+            let post_id = post.clone().id;
+
+            // get replies
+            let replies = &self.get_post_replies(post_id.clone(), false).await;
+
+            for reply in replies.payload.clone().unwrap() {
+                replies_out.push(reply);
+            }
+
+            // get favorites
+            let favorites = &self.get_post_favorites(post_id).await;
+
+            // ...
+            true_output.push((post, replies_out, favorites.payload));
+            continue;
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Successfully fetched replies"),
+            payload: Option::Some(true_output),
+        };
+    }
+
     /// Get an [`ActivityPost`] by its id
     ///
     /// # Arguments:

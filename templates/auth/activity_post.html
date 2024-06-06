@@ -19,7 +19,7 @@ endblock %} {% block toolbar %}
 
     <!-- main post -->
     <div
-        class="card full secondary round flex g-8 post"
+        class="card full border secondary round flex g-8 post"
         id="post-{{ post.id }}"
     >
         <!-- avatar -->
@@ -114,7 +114,11 @@ endblock %} {% block toolbar %}
             {% endif %}
         </div>
 
-        {% for p in replies %} {% let post = p %}
+        {% for p in replies %}
+        <!-- prettier:ignore -->
+        {% let post = p.0.clone() %}
+        <!-- prettier:ignore -->
+        {% let replies = p.1.len() %}
         <div class="card full round flex g-8 post" id="post-{{ post.id }}">
             <!-- avatar -->
             <img
@@ -148,7 +152,17 @@ endblock %} {% block toolbar %}
                 </div>
                 <!-- actions -->
                 <div class="post_actions footernav full justify-right">
-                    <div class="item" style="">
+                    <div class="item" style="margin-left: 0">
+                        <a
+                            class="flex align-center g-4"
+                            href="/{{ post.author }}/activity/{{ post.id }}"
+                        >
+                            <b>{{ replies }}</b>
+                            replies
+                        </a>
+                    </div>
+
+                    <div class="item">
                         <a
                             class="flex align-center g-4"
                             href="/{{ post.author }}/activity/{{ post.id }}"

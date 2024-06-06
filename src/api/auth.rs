@@ -12,6 +12,7 @@ pub struct OffsetQueryProps {
 #[derive(serde::Deserialize)]
 struct RegisterInfo {
     username: String,
+    invite_code: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -44,7 +45,27 @@ pub async fn register(body: web::Json<RegisterInfo>, data: web::Data<AppData>) -
 
     if disabled.is_some() {
         return HttpResponse::NotAcceptable()
-            .body("This server requires has registration disabled");
+            .body("This server requires has registration disabled.");
+    }
+
+    // check invite codes
+    let invite_codes = crate::config::get_var("INVITE_CODES");
+
+    if invite_codes.is_some() {
+        let invite_codes = invite_codes.unwrap();
+        let codes: Vec<&str> = invite_codes.split(",").collect();
+
+        // check body for invite code
+        if body.invite_code.is_none() {
+            return HttpResponse::NotAcceptable()
+                .body("This server requires an invite code to register.");
+        }
+
+        let invite_code = body.invite_code.clone().unwrap();
+
+        if codes.contains(&invite_code.as_str()) == false {
+            return HttpResponse::NotAcceptable().body("Invalid invite code.");
+        }
     }
 
     // ...

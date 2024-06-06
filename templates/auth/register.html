@@ -24,7 +24,8 @@ content%}
 
                 <p class="full">
                     By continuing, you agree to the
-                    <a href="#" data-dialog="terms">terms of use</a>.
+                    <a href="#" data-dialog="terms">terms of use</a>
+                    .
                 </p>
             </div>
 
@@ -33,6 +34,19 @@ content%}
                 action="/api/v1/auth/register"
                 id="register-user"
             >
+                {% if invite_code_required == true %}
+                <label for="invite_code"><b>Invite Code</b></label>
+
+                <input
+                    type="text"
+                    name="invite_code"
+                    id="invite_code"
+                    placeholder="Invite Code"
+                    class="full round"
+                    required="true"
+                />
+                {% endif %}
+
                 <label for="username"><b>Username</b></label>
 
                 <input
@@ -80,9 +94,9 @@ content%}
             </div>
 
             <div class="item">
-                <a href="https://code.stellular.org/stellular/guppy"
-                    >Source Code</a
-                >
+                <a href="https://code.stellular.org/stellular/guppy">
+                    Source Code
+                </a>
             </div>
         </div>
 
