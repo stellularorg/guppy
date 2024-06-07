@@ -74,6 +74,40 @@ endblock %} {% block toolbar %}
                         {{ favorites_count }}
                     </a>
                 </div>
+
+                {% if (deducktive != "") && (can_edit == false) %}
+                <div class="item">
+                    <button
+                        id="report_button"
+                        title="Report Page"
+                        class="round red"
+                        data-endpoint="{{ deducktive }}/api/v1/reports"
+                        style="
+                            height: 25px !important;
+                            min-height: 25px !important;
+                        "
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="lucide lucide-flag"
+                            aria-label="Flag symbol"
+                        >
+                            <path
+                                d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"
+                            />
+                            <line x1="4" x2="4" y1="22" y2="15" />
+                        </svg>
+                    </button>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -230,4 +264,27 @@ endblock %} {% block toolbar %}
         </div>
     </div>
 </dialog>
-{% call super() %} {% endblock %}
+
+{% if deducktive != "" %}
+<dialog id="upper:report">
+    <div style="width: 25rem; max-width: 100%">
+        <iframe
+            data-src="{{ deducktive }}/api/v1/reports/embed"
+            frameborder="0"
+            class="full"
+            style="height: 500px"
+        ></iframe>
+
+        <hr />
+
+        <div class="full flex justify-right g-4">
+            <a
+                class="button round red"
+                href="javascript:document.getElementById('upper:report').close();"
+            >
+                Close
+            </a>
+        </div>
+    </div>
+</dialog>
+{% endif %} {% call super() %} {% endblock %}

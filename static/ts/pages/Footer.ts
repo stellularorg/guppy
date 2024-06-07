@@ -323,5 +323,54 @@ window.addEventListener("click", (e: any) => {
     if (clicked_in_dialog === false) e.target.close();
 });
 
+// reports
+const report_button = document.getElementById("report_button");
+
+if (report_button) {
+    if (window.location.pathname === "/") {
+        report_button.remove();
+    }
+
+    report_button.addEventListener("click", async () => {
+        const iframe = document.querySelector(
+            "#upper\\:report iframe",
+        ) as HTMLIFrameElement;
+
+        (
+            document.getElementById("upper:report") as HTMLDialogElement
+        ).showModal();
+
+        iframe.src = iframe.getAttribute("data-src")!;
+
+        const iframe_load_event = () => {
+            // sync needed things
+            setTimeout(async () => {
+                iframe.contentWindow!.postMessage(
+                    {
+                        assign: "REPORT_AS_USER",
+                        value:
+                            (await (
+                                await fetch("/api/v1/auth/whoami")
+                            ).text()) || "",
+                    },
+                    "*",
+                );
+
+                iframe.contentWindow!.postMessage(
+                    {
+                        assign: "REAL_HREF",
+                        value: window.location.href,
+                    },
+                    "*",
+                );
+            }, 100);
+
+            iframe.removeEventListener("load", iframe_load_event);
+        };
+
+        iframe.addEventListener("load", iframe_load_event);
+    });
+}
+
 // default export
 export default {};

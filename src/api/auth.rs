@@ -185,6 +185,30 @@ pub async fn logout(req: HttpRequest, data: web::Data<AppData>) -> impl Responde
         .body("You have been signed out. You can now close this tab.");
 }
 
+#[get("/api/v1/auth/whoami")]
+pub async fn whoami(req: HttpRequest, data: web::Data<AppData>) -> impl Responder {
+    let cookie = req.cookie("__Secure-Token");
+
+    if cookie.is_none() {
+        // just return nothing on error
+        return HttpResponse::Ok().body("");
+    }
+
+    let res = data
+        .db
+        .get_user_by_unhashed(cookie.unwrap().value().to_string()) // if the user is returned, that means the ID is valid
+        .await;
+
+    if !res.success {
+        return HttpResponse::Ok().body("");
+    }
+
+    // return
+    return HttpResponse::Ok()
+        .append_header(("Content-Type", "text/plain"))
+        .body(res.payload.unwrap().user.username);
+}
+
 #[post("/api/v1/auth/users/{name:.*}/about")]
 pub async fn edit_about_request(
     req: HttpRequest,

@@ -66,6 +66,7 @@ struct UserProfileTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
+    deducktive: String,
     site_name: String,
     body_embed: String,
 }
@@ -80,6 +81,7 @@ pub struct QueryProps {
 #[template(path = "auth/activity_post.html")]
 struct ViewPostTemplate {
     user: UserState<String>,
+    can_edit: bool,
     // post stuff
     post: db::ActivityPost,
     replies: Vec<(db::ActivityPost, Vec<db::ActivityPost>, i32)>,
@@ -88,6 +90,7 @@ struct ViewPostTemplate {
     info: String,
     auth_state: bool,
     bundlrs: String,
+    deducktive: String,
     site_name: String,
     body_embed: String,
 }
@@ -314,6 +317,7 @@ pub async fn profile_view_request(
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
+        deducktive: base.deducktive,
         site_name: base.site_name,
         body_embed: base.body_embed,
         meta: meta.clone(),
@@ -362,11 +366,19 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
     let unwrap = user.payload.as_ref().unwrap();
 
     // verify auth status
-    let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
+    let (set_cookie, _, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
 
     // ...
     let base = base::get_base_values(req.cookie("__Secure-Token").is_some());
     let user = unwrap.clone().user;
+
+    let active_user = if token_user.is_some() && token_user.as_ref().unwrap().success {
+        Option::Some(token_user.unwrap().payload.unwrap().user)
+    } else {
+        Option::None
+    };
+
+    let can_edit = active_user.is_some() && active_user.as_ref().unwrap().username == user.username;
 
     // get post
     let post = data.db.get_post_by_id(post_id.clone()).await;
@@ -389,9 +401,11 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
     // ...
     let props = ViewPostTemplate {
         user,
+        can_edit,
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
+        deducktive: base.deducktive,
         site_name: base.site_name,
         body_embed: base.body_embed,
         // post
