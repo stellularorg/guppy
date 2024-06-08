@@ -1,5 +1,34 @@
 {% extends "../base.html" %} {% block title %}Register{% endblock %} {% block
-content%}
+toolbar_attrs %}style="position: fixed; top: 0; background: transparent;"{%
+endblock %} {% block content%}
+<style>
+    #_page {
+        display: grid;
+        place-items: center;
+        height: 100dvh;
+        max-height: 100dvh;
+        width: 100dvw;
+    }
+
+    #_page {
+        background: linear-gradient(
+            to bottom right,
+            hsla(249, 100%, 90%, 80%),
+            hsla(0, 100%, 90%, 80%),
+            hsla(21, 100%, 91%, 80%)
+        );
+    }
+
+    html.dark-theme #_page {
+        background: linear-gradient(
+            to bottom right,
+            hsla(249, 100%, 60%, 60%),
+            hsla(0, 100%, 75%, 80%),
+            hsla(21, 100%, 80%, 60%)
+        );
+    }
+</style>
+
 <div class="flex flex-column g-4">
     <main class="small flex flex-column align-center g-8">
         <div id="success" class="card border round" style="display: none"></div>
@@ -11,7 +40,12 @@ content%}
 
         <div
             class="card secondary round g-10 mobile:flex-column"
-            style="width: 50rem; max-width: 100dvw; display: flex"
+            style="
+                width: 50rem;
+                max-width: 100dvw;
+                display: flex;
+                padding: 2rem;
+            "
             id="forms"
         >
             <div class="full flex flex-column g-10">
@@ -24,8 +58,10 @@ content%}
 
                 <p class="full">
                     By continuing, you agree to the
-                    <a href="#" data-dialog="terms">terms of use</a>
-                    .
+                    <span style="display: inline-flex">
+                        <a href="#" data-dialog="terms">terms of use</a>
+                        .
+                    </span>
                 </p>
             </div>
 
@@ -84,19 +120,28 @@ content%}
             </form>
         </div>
 
-        <div class="footernav full justify-center">
-            <div class="item">
-                <a href="/">Homepage</a>
-            </div>
+        <div
+            class="card round secondary"
+            style="
+                width: max-content;
+                border-radius: var(--u-10);
+                padding: var(--u-04) var(--u-10);
+            "
+        >
+            <div class="footernav full justify-center">
+                <div class="item">
+                    <a href="/">Homepage</a>
+                </div>
 
-            <div class="item">
-                <a href="/flow/auth/login?callback={{ callback }}">Login</a>
-            </div>
+                <div class="item">
+                    <a href="/flow/auth/login?callback={{ callback }}">Login</a>
+                </div>
 
-            <div class="item">
-                <a href="https://code.stellular.org/stellular/guppy">
-                    Source Code
-                </a>
+                <div class="item">
+                    <a href="https://code.stellular.org/stellular/guppy">
+                        Source Code
+                    </a>
+                </div>
             </div>
         </div>
 

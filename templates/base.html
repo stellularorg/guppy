@@ -237,7 +237,15 @@
         </div>
 
         <!-- toolbar -->
-        <div class="toolbar flex justify-space-between">
+        <div
+            class="toolbar flex justify-space-between"
+            {%
+            block
+            toolbar_attrs
+            %}{%
+            endblock
+            %}
+        >
             <div class="flex">
                 <button
                     title="Menu"
@@ -319,7 +327,9 @@
                     </li>
                     <li>
                         This instance may also list its own additional terms
-                        somewhere <a href="{{ bundlrs }}{{ info }}">here</a>.
+                        somewhere
+                        <a href="{{ bundlrs }}{{ info }}">here</a>
+                        .
                     </li>
                 </ul>
 

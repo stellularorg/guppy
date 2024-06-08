@@ -633,6 +633,10 @@ table td:focus-within {
     margin-left: 0.5rem;
 }
 
+.footernav .item:first-child {
+    margin-left: 0;
+}
+
 .footernav .item::before {
     content: "·";
     position: absolute;
