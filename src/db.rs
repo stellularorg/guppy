@@ -7,9 +7,7 @@ pub struct AppData {
     pub http_client: awc::Client,
 }
 
-pub use dorsal::db::special::auth_db::{
-    FullUser, RoleLevel, RoleLevelLog, UserMetadata, UserState,
-};
+pub use dorsal::db::special::auth_db::{FullUser, RoleLevel, RoleLevelLog, UserMetadata, UserState};
 
 pub use dorsal::db::special::log_db::{Log, LogIdentifier};
 pub use dorsal::DefaultReturn;
@@ -1134,7 +1132,6 @@ impl Database {
     ///
     /// # Arguments:
     /// * `props` - [`PCreatePost`]
-    /// * `as_user` - The ID of the user creating the post
     pub async fn create_activity_post(
         &self,
         props: &mut PCreatePost,
@@ -1227,6 +1224,108 @@ impl Database {
             success: true,
             message: String::from("Post created"),
             payload: Option::Some(post),
+        };
+    }
+
+    /// Delete an existing [`ActivityPost`]
+    ///
+    /// # Arguments:
+    /// * `id` - post id
+    /// * `as_user` - The username of the user creating the post
+    pub async fn delete_activity_post(
+        &self,
+        id: String,
+        as_user: Option<String>,
+    ) -> DefaultReturn<bool> {
+        // make sure post exists
+        let existing = self.get_post_by_id(id.clone()).await;
+
+        if existing.success == false {
+            return DefaultReturn {
+                success: false,
+                message: existing.message,
+                payload: false,
+            };
+        }
+
+        let existing = existing.payload.unwrap();
+
+        if as_user.is_none() {
+            return DefaultReturn {
+                success: false,
+                message: String::from("You do not have permission to do this."),
+                payload: false,
+            };
+        }
+
+        // get user
+        let user = self.auth.get_user_by_username(as_user.unwrap()).await;
+
+        match user.payload {
+            Some(ua) => {
+                // check if user is either activity owner OR has "ManagePosts" permission
+                if (ua.user.username != existing.author)
+                    && (!ua.level.permissions.contains(&"ManagePosts".to_string()))
+                {
+                    return DefaultReturn {
+                        success: false,
+                        message: String::from("You do not have permission to do this."),
+                        payload: false,
+                    };
+                }
+            }
+            None => {
+                return DefaultReturn {
+                    success: false,
+                    message: String::from("User does not exist."),
+                    payload: false,
+                }
+            }
+        }
+
+        // delete
+        let query: &str = if (self.base.db._type == "sqlite") | (self.base.db._type == "mysql") {
+            "DELETE FROM \"gup_posts\" WHERE \"id\" = ?"
+        } else {
+            "DELETE FROM \"gup_posts\" WHERE \"id\" = $1"
+        };
+
+        let c = &self.base.db.client;
+        let res = sqlquery(query).bind::<&String>(&id).execute(c).await;
+
+        if res.is_err() {
+            return DefaultReturn {
+                success: false,
+                message: String::from(res.err().unwrap().to_string()),
+                payload: false,
+            };
+        }
+
+        // update cache
+        self.base.cachedb.remove(format!("post:{}", id)).await;
+
+        match existing.reply.is_empty() {
+            true => {
+                // clear user posts cache, this post is not a reply!
+                self.base
+                    .cachedb
+                    .remove_starting_with("user-posts:offset*".to_string())
+                    .await;
+            }
+            false => {
+                // clear post replies
+                self.base
+                    .cachedb
+                    .remove(format!("post-replies:{}", existing.reply))
+                    .await;
+            }
+        }
+
+        // return
+        return DefaultReturn {
+            success: true,
+            message: String::from("Post deleted"),
+            payload: false,
         };
     }
 

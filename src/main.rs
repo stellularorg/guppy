@@ -1,10 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![doc(html_root_url = "https://guppy.stellular.net/api/docs/guppy/")]
 #![doc(html_favicon_url = "https://stellular.net/static/favicon.svg")]
-#![doc(
-    html_logo_url = "https://code.stellular.org/repo-avatars/cc8d0efab0759fa6310b75fd5759c33169ee0ab354a958172ed4425a66d2593b"
-)]
-#![doc(issue_tracker_base_url = "https://code.stellular.org/stellular/guppy/issues/")]
+#![doc(html_logo_url = "https://avatars.githubusercontent.com/u/171628682")]
+#![doc(issue_tracker_base_url = "https://github.com/stellularorg/guppy/issues/")]
 
 use actix_files as fs;
 use actix_web::{web, App, HttpServer};
@@ -113,6 +111,7 @@ async fn main() -> std::io::Result<()> {
             // POST api
             // POST activity
             .service(crate::api::auth::post_activity_request)
+            .service(crate::api::auth::delete_activity_request)
             .service(crate::api::auth::favorite_request)
             // POST auth
             .service(crate::api::auth::callback_request)

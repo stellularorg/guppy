@@ -412,6 +412,7 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
         post: post.payload.unwrap(),
         replies: posts_res,
         favorites_count: data.db.get_post_favorites(post_id).await.payload,
+        // TODO: is_favorited
     };
 
     return HttpResponse::Ok()

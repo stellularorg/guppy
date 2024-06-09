@@ -91,7 +91,7 @@ if (compose_form) {
                 window.location.reload();
                 return;
             }
-            
+
             window.location.href = `${window.location.href}/activity/${json.payload.id}`;
         }
     });
@@ -113,6 +113,31 @@ if (compose_form) {
         success.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
     }
 };
+
+// delete post
+const delete_post: HTMLButtonElement | null = document.getElementById(
+    "delete_button",
+) as HTMLButtonElement | null;
+
+if (delete_post) {
+    // delete existing activity
+    delete_post.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const res = await fetch(delete_post.getAttribute("data-endpoint")!, {
+            method: "DELETE",
+        });
+
+        const json = await res.json();
+
+        if (json.success === false) {
+            error.style.display = "block";
+            error.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
+        } else {
+            success.style.display = "block";
+            success.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
+        }
+    });
+}
 
 // default export
 export default {};

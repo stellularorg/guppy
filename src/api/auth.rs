@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use serde_json::json;
 
 use crate::db::{self, AppData, DefaultReturn, FullUser, UserFollow, UserMetadata};
@@ -669,6 +669,38 @@ pub async fn favorite_request(req: HttpRequest, data: web::Data<db::AppData>) ->
         .toggle_user_post_favorite(
             token_user.unwrap().payload.unwrap().user.username,
             post_id.to_string(),
+        )
+        .await;
+
+    // return
+    return HttpResponse::Ok()
+        .append_header(("Content-Type", "application/json"))
+        .append_header(("Set-Cookie", set_cookie))
+        .body(serde_json::to_string(&res).unwrap());
+}
+
+#[delete("/api/v1/activity/{id:.*}")]
+/// Delete an activity post
+pub async fn delete_activity_request(
+    req: HttpRequest,
+    data: web::Data<db::AppData>,
+) -> impl Responder {
+    let post_id = req.match_info().get("id").unwrap();
+
+    // verify auth status
+    let (set_cookie, _, token_user) =
+        crate::pages::base::check_auth_status(req.clone(), data.clone()).await;
+
+    if token_user.is_none() {
+        return HttpResponse::NotAcceptable().body("An account is required to manage posts.");
+    }
+
+    // ...
+    let res = data
+        .db
+        .delete_activity_post(
+            post_id.to_string(),
+            Option::Some(token_user.unwrap().payload.unwrap().user.username),
         )
         .await;
 

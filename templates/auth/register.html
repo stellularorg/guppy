@@ -9,24 +9,6 @@ endblock %} {% block content%}
         max-height: 100dvh;
         width: 100dvw;
     }
-
-    #_page {
-        background: linear-gradient(
-            to bottom right,
-            hsla(249, 100%, 90%, 80%),
-            hsla(0, 100%, 90%, 80%),
-            hsla(21, 100%, 91%, 80%)
-        );
-    }
-
-    html.dark-theme #_page {
-        background: linear-gradient(
-            to bottom right,
-            hsla(249, 100%, 60%, 60%),
-            hsla(0, 100%, 75%, 80%),
-            hsla(21, 100%, 80%, 60%)
-        );
-    }
 </style>
 
 <div class="flex flex-column g-4">
@@ -120,28 +102,19 @@ endblock %} {% block content%}
             </form>
         </div>
 
-        <div
-            class="card round secondary"
-            style="
-                width: max-content;
-                border-radius: var(--u-10);
-                padding: var(--u-04) var(--u-10);
-            "
-        >
-            <div class="footernav full justify-center">
-                <div class="item">
-                    <a href="/">Homepage</a>
-                </div>
+        <div class="footernav full justify-center">
+            <div class="item">
+                <a href="/">Homepage</a>
+            </div>
 
-                <div class="item">
-                    <a href="/flow/auth/login?callback={{ callback }}">Login</a>
-                </div>
+            <div class="item">
+                <a href="/flow/auth/login?callback={{ callback }}">Login</a>
+            </div>
 
-                <div class="item">
-                    <a href="https://code.stellular.org/stellular/guppy">
-                        Source Code
-                    </a>
-                </div>
+            <div class="item">
+                <a href="https://code.stellular.org/stellular/guppy">
+                    Source Code
+                </a>
             </div>
         </div>
 
