@@ -61,6 +61,11 @@ a.button.secondary {
     @apply bg-neutral-300 dark:bg-neutral-900 hover:bg-neutral-200 hover:dark:bg-neutral-800;
 }
 
+button.tertiary,
+a.button.tertiary {
+    @apply bg-neutral-300 dark:bg-neutral-900 hover:bg-neutral-300/50 hover:dark:bg-neutral-900/50;
+}
+
 button.theme\:primary,
 a.button.theme\:primary {
     @apply !bg-brand hover:!bg-brand-low !text-black;

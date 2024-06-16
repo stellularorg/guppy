@@ -814,6 +814,28 @@ a.button.secondary:is(.dark *):hover {
   background-color: rgb(38 38 38 / var(--tw-bg-opacity));
 }
 
+button.tertiary,
+a.button.tertiary {
+  --tw-bg-opacity: 1;
+  background-color: rgb(212 212 212 / var(--tw-bg-opacity));
+}
+
+button.tertiary:hover,
+a.button.tertiary:hover {
+  background-color: rgb(212 212 212 / 0.5);
+}
+
+button.tertiary:is(.dark *),
+a.button.tertiary:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(23 23 23 / var(--tw-bg-opacity));
+}
+
+button.tertiary:is(.dark *):hover,
+a.button.tertiary:is(.dark *):hover {
+  background-color: rgb(23 23 23 / 0.5);
+}
+
 button.theme\:primary,
 a.button.theme\:primary {
   --tw-bg-opacity: 1 !important;
