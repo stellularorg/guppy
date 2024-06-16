@@ -17,20 +17,36 @@
 
         {% block head %}{% endblock %}
 
+        <!-- prefer default user color theme -->
+        <script>
+            if (
+                window.matchMedia("(prefers-color-scheme: dark)").matches &&
+                !window.localStorage.getItem("theme")
+            ) {
+                document.documentElement.classList.add("dark");
+                window.localStorage.setItem("theme", "dark");
+            } else if (
+                window.matchMedia("(prefers-color-scheme: light)").matches &&
+                !window.localStorage.getItem("theme")
+            ) {
+                document.documentElement.classList.remove("dark");
+                window.localStorage.setItem("theme", "light");
+            } else if (window.localStorage.getItem("theme")) {
+                /* restore theme */
+                const current = window.localStorage.getItem("theme");
+                document.documentElement.className = current;
+            }
+        </script>
+
+        <!-- ... -->
         <link rel="stylesheet" href="/static/style.css" />
         <script type="module" src="/static/js/Footer.js"></script>
     </head>
 
     <body>
         <!-- global menu -->
-        <div
-            class="link-list"
-            style="display: none; box-shadow: 2px 2px 4px hsla(0, 0%, 0%, 25%)"
-            id="upper:globalmenu"
-        >
-            <div
-                class="option small full flex align-center g-4 justify-space-between"
-            >
+        <div class="link-list" style="display: none" id="upper:globalmenu">
+            <div class="option w-full flex items-center gap-2 !justify-between">
                 <a href="/" style="color: inherit"><b>{{ site_name }}</b></a>
 
                 <a
@@ -39,7 +55,7 @@
                     title="Toggle Theme"
                     style="color: var(--text-color-faded)"
                 >
-                    <div id="theme-icon-sun" class="align-center">
+                    <div id="theme_icon_sun" class="align-center">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="18"
@@ -64,7 +80,7 @@
                         </svg>
                     </div>
 
-                    <div id="theme-icon-moon" class="align-center">
+                    <div id="theme_icon_moon" class="align-center">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="18"
@@ -83,14 +99,11 @@
                 </a>
             </div>
 
-            <div class="option full flex flex-column g-4">
+            <div class="option w-full flex flex-col gap-2">
                 <h6 class="no-margin">LINKS</h6>
 
                 {% if auth_state == false %}
-                <a
-                    href="{{ bundlrs }}"
-                    class="button full round border justify-start"
-                >
+                <a href="{{ bundlrs }}" class="button">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
@@ -112,7 +125,7 @@
 
                 <a
                     href="/flow/auth/register"
-                    class="button green full round border justify-start"
+                    class="button green"
                     data-wants-redirect="true"
                 >
                     <svg
@@ -135,7 +148,7 @@
 
                 <a
                     href="/flow/auth/login"
-                    class="button green full round border justify-start"
+                    class="button green"
                     data-wants-redirect="true"
                 >
                     <svg
@@ -157,10 +170,7 @@
                     login
                 </a>
                 {% else %}
-                <a
-                    href="/api/v1/auth/logout"
-                    class="button red full round border justify-start"
-                >
+                <a href="/api/v1/auth/logout" class="button red">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
@@ -182,13 +192,10 @@
                 {% endif %}
             </div>
 
-            <div class="option full flex flex-column g-4">
+            <div class="option w-full flex flex-col gap-2">
                 <h6 class="no-margin">HELP</h6>
 
-                <a
-                    href="{{ bundlrs }}{{ info }}"
-                    class="button full round border justify-start"
-                >
+                <a href="{{ bundlrs }}{{ info }}" class="button">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
@@ -208,10 +215,7 @@
                     info
                 </a>
 
-                <a
-                    href="/api/docs/guppy/index.html"
-                    class="button full round border justify-start"
-                >
+                <a href="/api/docs/guppy/index.html" class="button">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
@@ -237,18 +241,11 @@
         </div>
 
         <!-- toolbar -->
-        <div
-            class="toolbar flex justify-space-between"
-            {%
-            block
-            toolbar_attrs
-            %}{%
-            endblock
-            %}
-        >
-            <div class="flex">
+        <nav {% block toolbar_attrs %}{% endblock %}>
+            <div class="flex items-center gap-2">
                 <button
                     title="Menu"
+                    class="round"
                     onclick="window.toggle_child_menu(event.target, '#upper\\:globalmenu')"
                     style="border-left: 0"
                 >
@@ -273,7 +270,9 @@
                 {% block toolbar %}{% endblock %}
             </div>
 
-            <div class="flex">{% block toolbar_right %}{% endblock %}</div>
+            <div class="flex gap-2">
+                {% block toolbar_right %}{% endblock %}
+            </div>
 
             <style>
                 .toolbar {
@@ -285,7 +284,7 @@
                     border: 0 !important;
                 }
             </style>
-        </div>
+        </nav>
 
         <!-- page content -->
         <div class="toolbar-layout-wrapper" id="_page">
@@ -295,10 +294,10 @@
         {{ body_embed|safe }}
 
         <dialog id="terms">
-            <div style="width: 25rem; max-width: 100%">
-                <h2 class="no-margin full text-center">Terms of Use</h2>
+            <div style="width: 25rem; max-width: 100%" class="p-4">
+                <h2 class="no-margin w-full text-center">Terms of Use</h2>
 
-                <hr />
+                <hr class="my-4" />
 
                 <ul>
                     <li>
@@ -333,9 +332,9 @@
                     </li>
                 </ul>
 
-                <hr />
+                <hr class="my-4" />
 
-                <div class="full flex justify-right">
+                <div class="w-full flex justify-end">
                     <a
                         class="button round red"
                         href="javascript:document.getElementById('terms').close();"

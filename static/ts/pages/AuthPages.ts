@@ -39,10 +39,10 @@ if (register_form) {
             error.style.display = "block";
             error.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
         } else {
-            success.style.display = "block";
+            success.style.display = "flex";
             success.innerHTML = `<p>Account created! You can login using this code:</p>
 
-            <p class="card border round flex justify-center align-center">${json.message}</p>
+            <p class="card secondary round flex justify-center align-center">${json.message}</p>
 
             <p><b>Do not lose it!</b> This code is required for you to sign into your account, <b>it cannot be reset!</b></p>
             
@@ -71,7 +71,7 @@ if (register_form) {
             error.style.display = "block";
             error.innerHTML = `<div class="mdnote-title">${json.message}</div>`;
         } else {
-            success.style.display = "block";
+            success.style.display = "flex";
             success.innerHTML = `<p>Successfully logged into account.</p>
                 
                 <hr />

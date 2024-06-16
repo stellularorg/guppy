@@ -1,6 +1,6 @@
 {% extends "../base.html" %} {% block title %}{{ user.username }}{% endblock %}
 {% block toolbar %}
-<a class="button" href="/{{ user.username }}">
+<a class="button round" href="/{{ user.username }}">
     {{ user.username }}
     <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem">
         {{ user.role }}
@@ -12,7 +12,7 @@
 {% endblock %} {% block toolbar_right %} {% if auth_state %}
 <div class="flex">
     <a
-        class="button"
+        class="button round"
         href="/{{ user.username }}/settings"
         title="Synced User Settings"
     >
@@ -38,14 +38,22 @@
     </a>
 </div>
 {% endif %} {% endblock %} {% block content%}
-<main class="small flex flex-column g-4">
-    <div id="error" class="mdnote note-error full" style="display: none"></div>
-    <div id="success" class="mdnote note-note full" style="display: none"></div>
+<main class="flex flex-col gap-2">
+    <div
+        id="error"
+        class="mdnote note-error w-full"
+        style="display: none"
+    ></div>
+    <div
+        id="success"
+        class="mdnote note-note w-full"
+        style="display: none"
+    ></div>
 
-    <div class="card secondary round border">
-        <div class="flex flex-column g-8">
+    <div class="card round flex flex-col gap-4">
+        <div class="flex flex-col gap-4">
             <div
-                class="flex align-center g-8 flex-wrap"
+                class="flex items-center gap-4 flex-wrap"
                 style="max-width: 100%"
             >
                 <img
@@ -55,7 +63,7 @@
                 />
 
                 <div
-                    class="flex flex-column"
+                    class="flex flex-col"
                     style="max-width: 100%; min-width: max-content"
                 >
                     <h4
@@ -72,7 +80,7 @@
 
             <div
                 id="stats-or-info"
-                class="flex full flex-wrap mobile:justify-center footernav g-4"
+                class="flex w-full flex-wrap justify-center md:justify-start footernav gap-4"
             >
                 <div class="item" style="margin-left: 0">
                     <a href="/{{ user.username }}/following">
@@ -108,7 +116,7 @@
                     <button
                         id="report_button"
                         title="Report Page"
-                        class="round red"
+                        class="round red tertiary"
                         data-endpoint="{{ deducktive }}/api/v1/reports"
                         style="
                             height: 25px !important;
@@ -141,14 +149,14 @@
 
         <hr />
 
-        <div class="card border round" id="description">
+        <div class="card secondary round" id="description">
             {% if edit_mode == true %}
             <form
                 id="edit-about"
-                class="flex flex-column g-4"
+                class="flex flex-col gap-2"
                 data-endpoint="/api/v1/auth/users/{{ user.username }}/about"
             >
-                <div class="full flex justify-space-between align-center g-4">
+                <div class="w-full flex justify-between items-center gap-2">
                     <b>Edit About</b>
 
                     <button class="theme:primary round">
@@ -179,7 +187,7 @@
                     name="about"
                     id="about"
                     placeholder="About"
-                    class="full round"
+                    class="w-full round"
                     minlength="2"
                     maxlength="200000"
                     required
@@ -201,11 +209,8 @@
     <!-- activity -->
     <hr />
 
-    <div
-        class="card full secondary border round flex flex-column g-4"
-        id="feed"
-    >
-        <div class="flex justify-space-between align-center">
+    <div class="card w-full round flex flex-col gap-2" id="feed">
+        <div class="flex justify-between items-center">
             <h6 class="no-margin">Activity</h6>
 
             {% if can_edit == true %}
@@ -239,7 +244,10 @@
         {% let post = p.0.clone() %}
         <!-- prettier:ignore -->
         {% let replies = p.1.len() %}
-        <div class="card full round flex g-8 post" id="post-{{ post.id }}">
+        <div
+            class="card secondary w-full round flex gap-4 post"
+            id="post-{{ post.id }}"
+        >
             <!-- avatar -->
             <img
                 class="avatar"
@@ -248,7 +256,7 @@
             />
 
             <!-- author and content -->
-            <div class="flex flex-column g-4 full">
+            <div class="flex flex-col gap-2 w-full">
                 <!-- author -->
                 <div class="post_info footernav">
                     <div class="item" style="margin-left: 0">
@@ -267,11 +275,11 @@
                     </div>
                 </div>
                 <!-- content -->
-                <div class="post_content full">
+                <div class="post_content w-full">
                     {{ post.content_html|safe }}
                 </div>
                 <!-- actions -->
-                <div class="post_actions footernav full justify-right">
+                <div class="post_actions footernav w-full justify-right">
                     <div class="item" style="margin-left: 0">
                         <a href="/{{ post.author }}/activity/{{ post.id }}">
                             <b>{{ replies }}</b>
@@ -281,7 +289,7 @@
 
                     <div class="item">
                         <a
-                            class="flex align-center g-4"
+                            class="flex items-center gap-1"
                             href="javascript:window.favorite_post('{{ post.id }}')"
                         >
                             <svg
@@ -316,7 +324,7 @@
         </style>
     </div>
 
-    <div class="full flex justify-space-between" id="pages">
+    <div class="w-full flex justify-between" id="pages">
         <a
             class="button round"
             href="?offset={{ offset - 50 }}"
@@ -371,11 +379,12 @@
 
 <!-- dialogs -->
 <dialog id="upper:compose">
-    <div style="width: 25rem; max-width: 100%">
+    <div style="width: 25rem; max-width: 100%" class="p-4">
         <form
-            class="full flex flex-column g-4"
+            class="full flex flex-col gap-2"
             id="compose_activity"
             data-endpoint="/api/v1/activity"
+            data-reply="true"
         >
             <label for="content"><b>Content</b></label>
 
@@ -384,16 +393,16 @@
                 required
                 name="content"
                 id="content"
-                class="round"
+                class="round secondary"
                 placeholder="Post Content"
             ></textarea>
 
             <button class="round theme:primary">Post</button>
         </form>
 
-        <hr />
+        <hr class="my-4" />
 
-        <div class="full flex justify-right g-4">
+        <div class="w-full flex justify-end gap-2">
             <a
                 class="button round red"
                 href="javascript:document.getElementById('upper:compose').close();"
@@ -406,17 +415,17 @@
 
 {% if deducktive != "" %}
 <dialog id="upper:report">
-    <div style="width: 25rem; max-width: 100%">
+    <div style="width: 25rem; max-width: 100%" class="p-4">
         <iframe
             data-src="{{ deducktive }}/api/v1/reports/embed"
             frameborder="0"
-            class="full"
+            class="w-full"
             style="height: 500px"
         ></iframe>
 
-        <hr />
+        <hr class="my-4" />
 
-        <div class="full flex justify-right g-4">
+        <div class="w-full flex justify-end gap-2">
             <a
                 class="button round red"
                 href="javascript:document.getElementById('upper:report').close();"

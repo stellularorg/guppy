@@ -3,7 +3,7 @@
 {% block title %}{{ user.username }}{% endblock %}
 
 {% block toolbar %}
-<a class="button" href="/{{ user.username }}" style="border-left: 0">
+<a class="button round" href="/{{ user.username }}" style="border-left: 0">
     {{ user.username }}
     <span class="chip badge role-{{ user.role }}" style="padding: 0 0.5rem;">{{ user.role }}</span>
 </a>
@@ -15,21 +15,21 @@
 {% endblock %}
 
 {% block content%}
-<main class="small flex flex-column g-4">
+<main class="small flex flex-col gap-2">
     <div id="error" class="mdnote note-error full" style="display: none;"></div>
     <div id="success" class="mdnote note-note full" style="display: none;"></div>
 
-    <div class="flex justify-space-between align-center">
+    <div class="flex justify-between items-center">
         <h3 class="no-margin">{{ user.username }}'s followers</h3>
     </div>
 
-    <div class="card secondary round flex flex-column g-4">
+    <div class="card round flex flex-col gap-2">
         {% for u in followers.iter() %}
         {% let follow_log = crate::db::deserialize_userfollow(u.content.to_owned()) %}
 
-        <a class="button secondary full round justify-space-between flex-wrap" href="/{{ follow_log.user }}"
+        <a class="button secondary !w-full round flex !justify-between flex-wrap" href="/{{ follow_log.user }}"
             style="height: max-content !important;">
-            <span class="flex align-center g-4">
+            <span class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                     class="lucide lucide-circle-user-round">
@@ -45,7 +45,7 @@
         {% endfor %}
     </div>
 
-    <div class="full flex justify-space-between" id="pages">
+    <div class="w-full flex justify-between" id="pages">
         <a class="button round" href="?offset={{offset - 50}}" disabled="{{ offset <= 0 }}">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"

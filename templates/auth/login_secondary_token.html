@@ -11,9 +11,13 @@ endblock %} {% block content%}
     }
 </style>
 
-<div class="flex flex-column g-4">
-    <main class="small flex flex-column align-center g-8">
-        <div id="success" class="card border round" style="display: none"></div>
+<div class="flex flex-col gap-2">
+    <main class="small flex flex-col items-center gap-2">
+        <div
+            id="success"
+            class="card secondary round flex flex-col gap-2"
+            style="display: none"
+        ></div>
         <div
             id="error"
             class="mdnote note-error full"
@@ -21,7 +25,7 @@ endblock %} {% block content%}
         ></div>
 
         <div
-            class="card secondary round g-10 mobile:flex-column"
+            class="card round gap-4 flex-col md:flex-row"
             style="
                 width: 50rem;
                 max-width: 100dvw;
@@ -30,10 +34,10 @@ endblock %} {% block content%}
             "
             id="forms"
         >
-            <div class="full flex flex-column g-10">
+            <div class="w-full flex flex-col gap-4">
                 <h2 class="no-margin">Welcome back!</h2>
 
-                <p class="full">
+                <p class="w-full">
                     Login with your secondary token, or
                     <span style="display: inline-flex">
                         <a
@@ -46,7 +50,7 @@ endblock %} {% block content%}
                     </span>
                 </p>
 
-                <p class="full">
+                <p class="w-full">
                     By continuing, you agree to the
                     <span style="display: inline-flex">
                         <a href="#" data-dialog="terms">terms of use</a>
@@ -56,7 +60,7 @@ endblock %} {% block content%}
             </div>
 
             <form
-                class="card round border full flex flex-column g-4"
+                class="card more_padding secondary round w-full flex flex-col gap-2"
                 action="/api/v1/auth/login-st"
                 id="login-user-st"
             >
@@ -67,7 +71,7 @@ endblock %} {% block content%}
                     name="uid"
                     id="uid"
                     placeholder="00000000-0000-0000-0000-000000000000"
-                    class="full round secondary"
+                    class="w-full round"
                     required="true"
                     minlength="36"
                     maxlength="36"
@@ -75,7 +79,7 @@ endblock %} {% block content%}
 
                 <hr />
 
-                <button class="theme:primary full round">
+                <button class="theme:primary w-full round">
                     Login
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -97,7 +101,7 @@ endblock %} {% block content%}
             </form>
         </div>
 
-        <div class="footernav full justify-center">
+        <div class="footernav w-full justify-center">
             <div class="item">
                 <a href="/">Homepage</a>
             </div>

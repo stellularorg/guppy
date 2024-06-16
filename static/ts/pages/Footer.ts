@@ -1,67 +1,43 @@
-// theme manager
-(window as any).SunIcon = document.getElementById("theme-icon-sun");
-(window as any).MoonIcon = document.getElementById("theme-icon-moon");
+// theme
+(globalThis as any).sun_icon = document.getElementById("theme_icon_sun");
+(globalThis as any).moon_icon = document.getElementById("theme_icon_moon");
 
-(window as any).toggle_theme = () => {
-    if (
-        (window as any).PASTE_USES_CUSTOM_THEME &&
-        (window as any).localStorage.getItem(
-            "bundles:user.ForceClientTheme"
-        ) !== "true"
-    )
-        return;
-
-    const current = (window as any).localStorage.getItem("theme");
-
-    if (current === "dark") {
-        /* set light */
-        document.documentElement.classList.remove("dark-theme");
-        (window as any).localStorage.setItem("theme", "light");
-
-        (window as any).SunIcon.style.display = "flex";
-        (window as any).MoonIcon.style.display = "none";
+(globalThis as any).update_theme_icon = () => {
+    if (document.documentElement.classList.contains("dark")) {
+        (globalThis as any).sun_icon.style.display = "none";
+        (globalThis as any).moon_icon.style.display = "flex";
     } else {
-        /* set dark */
-        document.documentElement.classList.add("dark-theme");
-        (window as any).localStorage.setItem("theme", "dark");
-
-        (window as any).SunIcon.style.display = "none";
-        (window as any).MoonIcon.style.display = "flex";
+        (globalThis as any).sun_icon.style.display = "flex";
+        (globalThis as any).moon_icon.style.display = "none";
     }
 };
 
-/* prefer theme */
-if (
-    (window as any).matchMedia("(prefers-color-scheme: dark)").matches &&
-    !(window as any).localStorage.getItem("theme")
-) {
-    document.documentElement.classList.add("dark-theme");
-    (window as any).localStorage.setItem("theme", "dark");
-    (window as any).SunIcon.style.display = "none";
-    (window as any).MoonIcon.style.display = "flex";
-} else if (
-    (window as any).matchMedia("(prefers-color-scheme: light)").matches &&
-    !(window as any).localStorage.getItem("theme")
-) {
-    document.documentElement.classList.remove("dark-theme");
-    (window as any).localStorage.setItem("theme", "light");
-    (window as any).SunIcon.style.display = "flex";
-    (window as any).MoonIcon.style.display = "none";
-} else if ((window as any).localStorage.getItem("theme")) {
-    /* restore theme */
-    const current = (window as any).localStorage.getItem("theme");
-    document.documentElement.className = `${current}-theme`;
+(globalThis as any).update_theme_icon(); // initial update
 
-    if (current.includes("dark")) {
-        /* sun icon */
-        (window as any).SunIcon.style.display = "none";
-        (window as any).MoonIcon.style.display = "flex";
-    } else {
-        /* moon icon */
-        (window as any).SunIcon.style.display = "flex";
-        (window as any).MoonIcon.style.display = "none";
+(globalThis as any).toggle_theme = () => {
+    if (
+        (window as any).PASTE_USES_CUSTOM_THEME &&
+        (window as any).localStorage.getItem(
+            "bundles:user.ForceClientTheme",
+        ) !== "true"
+    ) {
+        return;
     }
-}
+
+    const current = window.localStorage.getItem("theme");
+
+    if (current === "dark") {
+        /* set light */
+        document.documentElement.classList.remove("dark");
+        window.localStorage.setItem("theme", "light");
+    } else {
+        /* set dark */
+        document.documentElement.classList.add("dark");
+        window.localStorage.setItem("theme", "dark");
+    }
+
+    (globalThis as any).update_theme_icon();
+};
 
 // global css string
 if (
@@ -71,7 +47,7 @@ if (
 ) {
     const style = document.createElement("style");
     style.innerHTML = (window as any).localStorage.getItem(
-        "bundles:user.GlobalCSSString"
+        "bundles:user.GlobalCSSString",
     );
     document.body.appendChild(style);
 }
@@ -79,16 +55,16 @@ if (
 // localize dates
 setTimeout(() => {
     for (const element of Array.from(
-        document.querySelectorAll(".date-time-to-localize")
+        document.querySelectorAll(".date-time-to-localize"),
     ) as HTMLElement[])
         element.innerText = new Date(
-            parseInt(element.innerText)
+            parseInt(element.innerText),
         ).toLocaleDateString();
 }, 50);
 
 // disabled="false"
 for (const element of Array.from(
-    document.querySelectorAll('[disabled="false"]')
+    document.querySelectorAll('[disabled="false"]'),
 ) as HTMLButtonElement[]) {
     element.removeAttribute("disabled");
 }
@@ -96,7 +72,7 @@ for (const element of Array.from(
 // disable "a"
 setTimeout(() => {
     for (const element of Array.from(
-        document.querySelectorAll("a[disabled]")
+        document.querySelectorAll("a[disabled]"),
     )) {
         element.removeAttribute("href");
     }
@@ -107,7 +83,7 @@ const dismissables = document.querySelectorAll(".dismissable");
 
 for (const dismissable of Array.from(dismissables) as HTMLElement[]) {
     const is_dismissed = window.sessionStorage.getItem(
-        `dismissed:${dismissable.id}`
+        `dismissed:${dismissable.id}`,
     );
 
     if (is_dismissed === "true") {
@@ -119,7 +95,7 @@ for (const dismissable of Array.from(dismissables) as HTMLElement[]) {
             dismiss_button.addEventListener("click", () => {
                 window.sessionStorage.setItem(
                     `dismissed:${dismissable.id}`,
-                    "true"
+                    "true",
                 );
 
                 dismissable.remove();
@@ -188,7 +164,7 @@ for (const avatar of Array.from(avatars) as HTMLImageElement[]) {
 
 // events
 const onclick = Array.from(
-    document.querySelectorAll("[b_onclick]")
+    document.querySelectorAll("[b_onclick]"),
 ) as HTMLElement[];
 
 for (const element of onclick) {
@@ -202,7 +178,6 @@ for (const element of onclick) {
     id: string,
     bottom: boolean = true,
     align_left: boolean = false,
-    invert: boolean = true
 ) => {
     // resolve button
     while (self.nodeName !== "BUTTON") {
@@ -226,7 +201,7 @@ for (const element of onclick) {
 
     // ...
     const menu: HTMLElement | null = document.querySelector(
-        id
+        id,
     ) as HTMLElement | null;
 
     if (menu) {
@@ -249,14 +224,6 @@ for (const element of onclick) {
 
             // show menu
             menu.style.display = "flex";
-
-            // ...
-            if (invert === true) {
-                self.style.background = "var(--background-surface)";
-                self.style.filter = "invert(1) grayscale(1)";
-            } else {
-                self.style.background = "var(--text-color)";
-            }
 
             // events
             menu.addEventListener("click", (event) => {
@@ -289,19 +256,19 @@ for (const element of onclick) {
 
 // wants redirect
 for (const element of Array.from(
-    document.querySelectorAll('[data-wants-redirect="true"]')
+    document.querySelectorAll('[data-wants-redirect="true"]'),
 ) as HTMLAnchorElement[]) {
     element.href = `${element.href}?callback=${encodeURIComponent(
-        `${window.location.origin}/api/v1/auth/callback`
+        `${window.location.origin}/api/v1/auth/callback`,
     )}`;
 }
 
 // modal
 for (const element of Array.from(
-    document.querySelectorAll("[data-dialog]")
+    document.querySelectorAll("[data-dialog]"),
 ) as HTMLAnchorElement[]) {
     const dialog_element: HTMLDialogElement = document.getElementById(
-        element.getAttribute("data-dialog")!
+        element.getAttribute("data-dialog")!,
     ) as HTMLDialogElement;
 
     element.addEventListener("click", () => {

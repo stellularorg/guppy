@@ -1,5 +1,6 @@
 /target
 /static/css
+/static/style.css
 Cargo.lock
 *.db
 

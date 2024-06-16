@@ -1,16 +1,6 @@
-{% extends "base.html" %}
-{% block title %}Home{% endblock %}
-
-{% block toolbar %}
-{% if auth_state == true %}
-<a class="button" href="/flow" style="border-left: none;">Dashboard</a>
-{% endif %}
-{% endblock %}
-
-{% block head %}
+{% extends "base.html" %} {% block title %}Home{% endblock %} {% block toolbar
+%} {% if auth_state == true %}
+<a class="button round" href="/flow" style="border-left: none">Dashboard</a>
+{% endif %} {% endblock %} {% block head %}
 <meta http-equiv="refresh" content="0; url={{ bundlrs }}" />
-{% endblock %}
-
-{% block content %}
-{% call super() %}
-{% endblock %}
+{% endblock %} {% block content %} {% call super() %} {% endblock %}

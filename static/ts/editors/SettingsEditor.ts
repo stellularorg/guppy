@@ -60,7 +60,7 @@ export function user_settings(
                     value="${use === "input" ? meta_value || "" : ""}" 
                     required 
                     oninput="window.user_settings_field_input(event);" 
-                    class="round mobile:max"
+                    class="round md:w-max w-full secondary"
                     style="width: 60%;"
                 ${
                     use === "textarea"
