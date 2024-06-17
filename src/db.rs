@@ -1309,7 +1309,7 @@ impl Database {
                 // clear user posts cache, this post is not a reply!
                 self.base
                     .cachedb
-                    .remove_starting_with("user-posts:offset:*".to_string())
+                    .remove_starting_with(format!("user-posts:{}:offset:*", existing.author))
                     .await;
             }
             false => {

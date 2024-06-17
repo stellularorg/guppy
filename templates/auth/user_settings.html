@@ -1,6 +1,6 @@
 {% extends "../base.html" %} {% block title %}{{ profile.username }}{% endblock
 %} {% block toolbar %}
-<a class="button" href="/{{ profile.username }}" style="border-left: 0">
+<a class="button round" href="/{{ profile.username }}" style="border-left: 0">
     {{ profile.username }}
     <span class="chip badge role-{{ profile.role }}" style="padding: 0 0.5rem">
         {{ profile.role }}
@@ -18,7 +18,7 @@
         >
             <div class="flex gap-2">
                 <form action="/api/v1/metadata" id="update-form">
-                    <button class="green round secondary">
+                    <button class="green round tertiary">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="18"
@@ -41,16 +41,11 @@
                     </button>
                 </form>
 
-                <button class="secondary round" id="add_field">
-                    Add Field
-                </button>
+                <button class="tertiary round" id="add_field">Add Field</button>
             </div>
 
             <div class="flex gap-2">
-                <a
-                    href="/{{ profile.username }}"
-                    class="button round secondary"
-                >
+                <a href="/{{ profile.username }}" class="button round tertiary">
                     Cancel
                 </a>
             </div>
