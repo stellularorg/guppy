@@ -7,7 +7,9 @@ pub struct AppData {
     pub http_client: awc::Client,
 }
 
-pub use dorsal::db::special::auth_db::{FullUser, RoleLevel, RoleLevelLog, UserMetadata, UserState};
+pub use dorsal::db::special::auth_db::{
+    FullUser, RoleLevel, RoleLevelLog, UserMetadata, UserState, Result,
+};
 
 pub use dorsal::db::special::log_db::{Log, LogIdentifier};
 pub use dorsal::DefaultReturn;
@@ -118,10 +120,7 @@ impl Database {
     ///
     /// # Arguments:
     /// * `hashed` - `String` of the user's hashed ID
-    pub async fn get_user_by_hashed(
-        &self,
-        hashed: String,
-    ) -> DefaultReturn<Option<FullUser<String>>> {
+    pub async fn get_user_by_hashed(&self, hashed: String) -> Result<FullUser<UserMetadata>> {
         self.auth.get_user_by_hashed(hashed).await
     }
 
@@ -131,10 +130,7 @@ impl Database {
     ///
     /// # Arguments:
     /// * `unhashed` - `String` of the user's unhashed ID
-    pub async fn get_user_by_unhashed(
-        &self,
-        unhashed: String,
-    ) -> DefaultReturn<Option<FullUser<String>>> {
+    pub async fn get_user_by_unhashed(&self, unhashed: String) -> Result<FullUser<UserMetadata>> {
         self.auth.get_user_by_unhashed(unhashed).await
     }
 
@@ -145,7 +141,7 @@ impl Database {
     pub async fn get_user_by_unhashed_st(
         &self,
         unhashed: String,
-    ) -> DefaultReturn<Option<FullUser<String>>> {
+    ) -> Result<FullUser<UserMetadata>> {
         self.auth.get_user_by_unhashed_st(unhashed).await
     }
 
@@ -153,10 +149,7 @@ impl Database {
     ///
     /// # Arguments:
     /// * `username` - `String` of the user's username
-    pub async fn get_user_by_username(
-        &self,
-        username: String,
-    ) -> DefaultReturn<Option<FullUser<String>>> {
+    pub async fn get_user_by_username(&self, username: String) -> Result<FullUser<UserMetadata>> {
         self.auth.get_user_by_username(username).await
     }
 
@@ -165,7 +158,11 @@ impl Database {
     /// # Arguments:
     /// * `name` - `String` of the level's role name
     pub async fn get_level_by_role(&self, name: String) -> DefaultReturn<RoleLevelLog> {
-        self.auth.get_level_by_role(name).await
+        DefaultReturn {
+            success: true,
+            message: String::new(),
+            payload: self.auth.get_level_by_role(name).await,
+        }
     }
 
     // SET
@@ -176,7 +173,7 @@ impl Database {
     pub async fn create_user(&self, username: String) -> DefaultReturn<Option<String>> {
         // make sure user doesn't already exists
         let existing = &self.get_user_by_username(username.clone()).await;
-        if existing.success {
+        if existing.is_ok() {
             return DefaultReturn {
                 success: false,
                 message: String::from("User already exists!"),
@@ -228,7 +225,6 @@ impl Database {
                     about: String::new(),
                     avatar_url: Option::None,
                     secondary_token: Option::None,
-                    allow_mail: Option::Some(String::from("yes")),
                     nickname: Option::Some(username.clone()),
                 })
                 .unwrap(),
@@ -260,7 +256,7 @@ impl Database {
     ) -> DefaultReturn<Option<String>> {
         // make sure user exists
         let existing = &self.get_user_by_username(name.clone()).await;
-        if !existing.success {
+        if !existing.is_ok() {
             return DefaultReturn {
                 success: false,
                 message: String::from("User does not exist!"),
@@ -321,7 +317,7 @@ impl Database {
     pub async fn ban_user_by_name(&self, name: String) -> DefaultReturn<Option<String>> {
         // make sure user exists
         let existing = &self.get_user_by_username(name.clone()).await;
-        if !existing.success {
+        if !existing.is_ok() {
             return DefaultReturn {
                 success: false,
                 message: String::from("User does not exist!"),
@@ -330,7 +326,7 @@ impl Database {
         }
 
         // make sure user level elevation is 0
-        let level = &existing.payload.as_ref().unwrap().level;
+        let level = &existing.as_ref().ok().unwrap().level;
         if level.elevation == 0 {
             return DefaultReturn {
                 success: false,
@@ -638,10 +634,9 @@ impl Database {
         }
 
         // make sure both users exist
-        let existing: DefaultReturn<Option<FullUser<String>>> =
-            self.get_user_by_username(p.user.to_owned()).await;
+        let existing = self.get_user_by_username(p.user.to_owned()).await;
 
-        if !existing.success {
+        if !existing.is_ok() {
             return DefaultReturn {
                 success: false,
                 message: String::from("User does not exist!"),
@@ -650,10 +645,9 @@ impl Database {
         }
 
         // make sure both users exist
-        let existing: DefaultReturn<Option<FullUser<String>>> =
-            self.get_user_by_username(p.is_following.to_owned()).await;
+        let existing = self.get_user_by_username(p.is_following.to_owned()).await;
 
-        if !existing.success {
+        if !existing.is_ok() {
             return DefaultReturn {
                 success: false,
                 message: String::from("User (2) does not exist!"),
@@ -696,11 +690,11 @@ impl Database {
         let offset = if offset.is_some() { offset.unwrap() } else { 0 };
 
         // make sure user exists
-        let existing: DefaultReturn<Option<FullUser<String>>> = self
+        let existing = self
             .get_user_by_username(username.to_owned().to_lowercase())
             .await;
 
-        if existing.success == false {
+        if existing.is_ok() == false {
             return DefaultReturn {
                 success: false,
                 message: String::from("User does not exist"),
@@ -1150,11 +1144,11 @@ impl Database {
         }
 
         // make sure author exists
-        let existing: DefaultReturn<Option<FullUser<String>>> = self
+        let existing = self
             .get_user_by_username(p.author.to_owned().to_lowercase())
             .await;
 
-        if existing.success == false {
+        if existing.is_ok() == false {
             return DefaultReturn {
                 success: false,
                 message: String::from("User does not exist"),
@@ -1261,8 +1255,8 @@ impl Database {
         // get user
         let user = self.auth.get_user_by_username(as_user.unwrap()).await;
 
-        match user.payload {
-            Some(ua) => {
+        match user {
+            Ok(ua) => {
                 // check if user is either activity owner OR has "ManagePosts" permission
                 if (ua.user.username != existing.author)
                     && (!ua.level.permissions.contains(&"ManagePosts".to_string()))
@@ -1274,10 +1268,10 @@ impl Database {
                     };
                 }
             }
-            None => {
+            Err(e) => {
                 return DefaultReturn {
                     success: false,
-                    message: String::from("User does not exist."),
+                    message: e.to_string(),
                     payload: false,
                 }
             }

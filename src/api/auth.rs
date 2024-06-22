@@ -91,27 +91,34 @@ pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl
     let id = body.uid.trim();
     let id_hashed = utility::hash(id.to_string());
 
-    let res: DefaultReturn<Option<FullUser<String>>> = data
+    let res = data
         .db
         .get_user_by_hashed(id_hashed) // if the user is returned, that means the ID is valid
         .await;
 
-    let set_cookie = if res.success && res.payload.is_some() {
+    let set_cookie = if res.is_ok() {
         format!("__Secure-Token={}; SameSite=Lax; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age={}", body.uid, 60 * 60 * 24 * 365)
     } else {
         String::new()
     };
 
-    if res.success == false {
+    if res.is_ok() == false {
         return HttpResponse::NotAcceptable()
-            .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+            .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
             .append_header(("Content-Type", "application/json"))
-            .body(serde_json::to_string::<DefaultReturn<Option<FullUser<String>>>>(&res).unwrap());
+            .body(
+                serde_json::to_string::<DefaultReturn<FullUser<UserMetadata>>>(&DefaultReturn {
+                    success: true,
+                    message: String::new(),
+                    payload: res.ok().unwrap(),
+                })
+                .unwrap(),
+            );
     }
 
     // return
     return HttpResponse::Ok()
-        .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+        .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
         .append_header(("Content-Type", "application/json"))
         .body(
             serde_json::to_string(&json! ({
@@ -135,22 +142,29 @@ pub async fn login_secondary_token(
         .get_user_by_unhashed_st(id_unhashed) // if the user is returned, that means the token is valid
         .await;
 
-    let set_cookie = if res.success && res.payload.is_some() {
+    let set_cookie = if res.is_ok() {
         format!("__Secure-Token={}; SameSite=Lax; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age={}", body.uid, 60 * 60 * 24 * 365)
     } else {
         String::new()
     };
 
-    if res.success == false {
+    if res.is_ok() == false {
         return HttpResponse::NotAcceptable()
-            .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+            .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
             .append_header(("Content-Type", "application/json"))
-            .body(serde_json::to_string::<DefaultReturn<Option<FullUser<String>>>>(&res).unwrap());
+            .body(
+                serde_json::to_string::<DefaultReturn<FullUser<UserMetadata>>>(&DefaultReturn {
+                    success: true,
+                    message: String::new(),
+                    payload: res.ok().unwrap(),
+                })
+                .unwrap(),
+            );
     }
 
     // return
     return HttpResponse::Ok()
-        .append_header(("Set-Cookie", if res.success { &set_cookie } else { "" }))
+        .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
         .append_header(("Content-Type", "application/json"))
         .body(
             serde_json::to_string(&json! ({
@@ -174,7 +188,7 @@ pub async fn logout(req: HttpRequest, data: web::Data<AppData>) -> impl Responde
         .get_user_by_unhashed(cookie.unwrap().value().to_string()) // if the user is returned, that means the ID is valid
         .await;
 
-    if !res.success {
+    if !res.is_ok() {
         return HttpResponse::NotAcceptable().body("Invalid token");
     }
 
@@ -199,14 +213,14 @@ pub async fn whoami(req: HttpRequest, data: web::Data<AppData>) -> impl Responde
         .get_user_by_unhashed(cookie.unwrap().value().to_string()) // if the user is returned, that means the ID is valid
         .await;
 
-    if !res.success {
+    if !res.is_ok() {
         return HttpResponse::Ok().body("");
     }
 
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "text/plain"))
-        .body(res.payload.unwrap().user.username);
+        .body(res.ok().unwrap().user.username);
 }
 
 #[post("/api/v1/auth/users/{name:.*}/about")]
@@ -226,13 +240,12 @@ pub async fn edit_about_request(
             .body("An account is required to do this");
     }
 
-    let token_user = token_user.unwrap().payload.unwrap();
+    let token_user = token_user.unwrap().ok().unwrap();
 
     // make sure profile exists
-    let profile: DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name.to_owned()).await;
+    let profile = data.db.get_user_by_username(name.to_owned()).await;
 
-    if !profile.success {
+    if !profile.is_ok() {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "application/json"))
             .body(
@@ -245,8 +258,8 @@ pub async fn edit_about_request(
             );
     }
 
-    let profile = profile.payload.unwrap();
-    let mut user = serde_json::from_str::<UserMetadata>(&profile.user.metadata).unwrap();
+    let profile = profile.ok().unwrap();
+    let mut user = profile.user.metadata;
 
     // check if we can update this user
     // must be authenticated AND same user OR staff
@@ -303,13 +316,12 @@ pub async fn refresh_secondary_token_request(
             .body("An account is required to do this");
     }
 
-    let token_user = token_user.unwrap().payload.unwrap();
+    let token_user = token_user.unwrap().ok().unwrap();
 
     // make sure profile exists
-    let profile: DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name.to_owned()).await;
+    let profile = data.db.get_user_by_username(name.to_owned()).await;
 
-    if !profile.success {
+    if !profile.is_ok() {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "application/json"))
             .body(
@@ -322,8 +334,8 @@ pub async fn refresh_secondary_token_request(
             );
     }
 
-    let profile = profile.payload.unwrap();
-    let mut user = serde_json::from_str::<UserMetadata>(&profile.user.metadata).unwrap();
+    let profile = profile.ok().unwrap();
+    let mut user = profile.user.metadata;
 
     // check if we can update this user
     // must be authenticated AND same user OR staff
@@ -371,7 +383,7 @@ pub async fn follow_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
             .body("An account is required to do this");
     }
 
-    let token_user = token_user.unwrap().payload.unwrap();
+    let token_user = token_user.unwrap().ok().unwrap();
 
     // ...
     let res = data
@@ -406,10 +418,9 @@ pub async fn update_request(
     }
 
     // make sure profile exists
-    let profile: DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name.to_owned()).await;
+    let profile = data.db.get_user_by_username(name.to_owned()).await;
 
-    if !profile.success {
+    if !profile.is_ok() {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "application/json"))
             .body(
@@ -422,8 +433,8 @@ pub async fn update_request(
             );
     }
 
-    let token_user = token_user.unwrap().payload.unwrap();
-    let profile = profile.payload.unwrap();
+    let token_user = token_user.unwrap().ok().unwrap();
+    let profile = profile.ok().unwrap();
 
     // check if we can update this user
     // must be authenticated AND same user OR staff
@@ -470,7 +481,7 @@ pub async fn ban_request(req: HttpRequest, data: web::Data<db::AppData>) -> impl
     // make sure token_user is of role "staff"
     if !token_user
         .unwrap()
-        .payload
+        .ok()
         .unwrap()
         .level
         .permissions
@@ -533,10 +544,9 @@ pub async fn avatar_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // make sure profile exists
-    let profile: DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name.to_owned()).await;
+    let profile = data.db.get_user_by_username(name.to_owned()).await;
 
-    if !profile.success {
+    if !profile.is_ok() {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "application/json"))
             .body(
@@ -549,8 +559,8 @@ pub async fn avatar_request(req: HttpRequest, data: web::Data<AppData>) -> impl 
             );
     }
 
-    let profile = profile.payload.unwrap();
-    let user = serde_json::from_str::<UserMetadata>(&profile.user.metadata).unwrap();
+    let profile = profile.ok().unwrap();
+    let user = profile.user.metadata;
 
     if user.avatar_url.is_none() {
         return HttpResponse::NotFound().body("User does not have an avatar set");
@@ -597,10 +607,9 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
     let name: String = req.match_info().get("name").unwrap().to_string();
 
     // get user
-    let res: DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name.to_owned()).await;
+    let res = data.db.get_user_by_username(name.to_owned()).await;
 
-    if res.success == false {
+    if res.is_ok() == false {
         return HttpResponse::Ok()
             .append_header(("Content-Type", "application/json"))
             .body(
@@ -616,7 +625,7 @@ pub async fn level_request(req: HttpRequest, data: web::Data<AppData>) -> impl R
     // return
     return HttpResponse::Ok()
         .append_header(("Content-Type", "application/json"))
-        .body(serde_json::to_string::<db::RoleLevel>(&res.payload.unwrap().level).unwrap());
+        .body(serde_json::to_string::<db::RoleLevel>(&res.ok().unwrap().level).unwrap());
 }
 
 // activity
@@ -635,7 +644,7 @@ pub async fn post_activity_request(
             .body("An account is required to do this");
     }
 
-    let token_user = token_user.unwrap().payload.unwrap();
+    let token_user = token_user.unwrap().ok().unwrap();
 
     // create props
     let mut props = body.clone();
@@ -667,7 +676,7 @@ pub async fn favorite_request(req: HttpRequest, data: web::Data<db::AppData>) ->
     let res = data
         .db
         .toggle_user_post_favorite(
-            token_user.unwrap().payload.unwrap().user.username,
+            token_user.unwrap().ok().unwrap().user.username,
             post_id.to_string(),
         )
         .await;
@@ -700,7 +709,7 @@ pub async fn delete_activity_request(
         .db
         .delete_activity_post(
             post_id.to_string(),
-            Option::Some(token_user.unwrap().payload.unwrap().user.username),
+            Option::Some(token_user.unwrap().ok().unwrap().user.username),
         )
         .await;
 

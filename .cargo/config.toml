@@ -1,2 +1,0 @@
-[registries]
-stellular = { index = "sparse+https://code.stellular.org/api/packages/stellular/cargo/" }

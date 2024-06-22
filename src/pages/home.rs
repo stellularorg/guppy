@@ -34,7 +34,7 @@ pub async fn home_request(req: HttpRequest, data: web::Data<db::AppData>) -> imp
 
     if token_user.is_some() {
         // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
+        if token_user.as_ref().unwrap().is_ok() == false {
             set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
             token_user = Option::None;
         }

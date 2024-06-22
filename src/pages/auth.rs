@@ -1,6 +1,6 @@
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 
-use crate::db::{self, AppData, FullUser, Log, UserMetadata, UserState};
+use crate::db::{self, AppData, Log, UserMetadata, UserState};
 
 use super::base;
 use askama::Template;
@@ -50,7 +50,7 @@ struct LoginSecondaryTokenTemplate {
 #[derive(Template)]
 #[template(path = "auth/user_profile.html")]
 struct UserProfileTemplate {
-    user: UserState<String>,
+    user: UserState<UserMetadata>,
     meta: UserMetadata,
     user_nick: String,
     can_edit: bool,
@@ -80,7 +80,7 @@ pub struct QueryProps {
 #[derive(Template)]
 #[template(path = "auth/activity_post.html")]
 struct ViewPostTemplate {
-    user: UserState<String>,
+    user: UserState<UserMetadata>,
     can_edit: bool,
     // post stuff
     post: db::ActivityPost,
@@ -99,7 +99,7 @@ struct ViewPostTemplate {
 #[template(path = "auth/followers.html")]
 struct FollowersTemplate {
     followers: Vec<Log>,
-    user: UserState<String>,
+    user: UserState<UserMetadata>,
     offset: i32,
     // required fields (super::base)
     info: String,
@@ -113,7 +113,7 @@ struct FollowersTemplate {
 #[template(path = "auth/following.html")]
 struct FollowingTemplate {
     following: Vec<Log>,
-    user: UserState<String>,
+    user: UserState<UserMetadata>,
     offset: i32,
     // required fields (super::base)
     info: String,
@@ -131,7 +131,7 @@ pub struct FollowersQueryProps {
 #[derive(Template)]
 #[template(path = "auth/user_settings.html")]
 struct SettingsTemplate {
-    profile: UserState<String>,
+    profile: UserState<UserMetadata>,
     metadata: String,
     // required fields (super::base)
     info: String,
@@ -231,16 +231,15 @@ pub async fn profile_view_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: db::DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(username).await;
+    let user = data.db.get_user_by_username(username).await;
 
-    if user.success == false {
+    if user.is_ok() == false {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "text/plain"))
             .body("404: Not Found");
     }
 
-    let unwrap = user.payload.as_ref().unwrap();
+    let unwrap = user.ok().unwrap();
 
     // verify auth status
     let (set_cookie, _, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
@@ -256,15 +255,15 @@ pub async fn profile_view_request(
         data.db.get_user_following_count(username_c.clone()).await;
 
     let is_following_res: Option<db::DefaultReturn<Option<db::Log>>> =
-        if token_user.is_some() && token_user.as_ref().unwrap().success {
+        if token_user.is_some() && token_user.as_ref().unwrap().is_ok() {
             Option::Some(
                 data.db
                     .get_follow_by_user(
                         token_user
                             .as_ref()
                             .unwrap()
-                            .payload
                             .as_ref()
+                            .ok()
                             .unwrap()
                             .user
                             .username
@@ -293,9 +292,8 @@ pub async fn profile_view_request(
     };
 
     // ...
-    let meta = serde_json::from_str::<UserMetadata>(&user.metadata).unwrap();
-    let active_user = if token_user.is_some() && token_user.as_ref().unwrap().success {
-        Option::Some(token_user.unwrap().payload.unwrap().user)
+    let active_user = if token_user.is_some() && token_user.as_ref().unwrap().is_ok() {
+        Option::Some(token_user.unwrap().as_ref().ok().unwrap().user.clone())
     } else {
         Option::None
     };
@@ -313,22 +311,22 @@ pub async fn profile_view_request(
 
     // ...
     let props = UserProfileTemplate {
-        user,
+        user: user.clone(),
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,
         deducktive: base.deducktive,
         site_name: base.site_name,
         body_embed: base.body_embed,
-        meta: meta.clone(),
-        user_nick: if meta.nickname.is_some() {
-            meta.nickname.as_ref().unwrap().to_string()
+        meta: user.metadata.clone(),
+        user_nick: if user.metadata.nickname.is_some() {
+            user.metadata.nickname.as_ref().unwrap().to_string()
         } else {
             username_c
         },
         can_edit,
         edit_mode,
-        about: crate::markup::render(&meta.about.clone()),
+        about: crate::markup::render(&user.metadata.about.clone()),
         is_following,
         followers_count,
         following_count,
@@ -354,16 +352,15 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
     let username: String = req.match_info().get("username").unwrap().to_string();
 
     // get user
-    let user: db::DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(username).await;
+    let user = data.db.get_user_by_username(username).await;
 
-    if user.success == false {
+    if user.is_ok() == false {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "text/plain"))
             .body("404: Not Found");
     }
 
-    let unwrap = user.payload.as_ref().unwrap();
+    let unwrap = user.ok().unwrap();
 
     // verify auth status
     let (set_cookie, _, token_user) = base::check_auth_status(req.clone(), data.clone()).await;
@@ -372,8 +369,8 @@ pub async fn view_post_request(req: HttpRequest, data: web::Data<AppData>) -> im
     let base = base::get_base_values(req.cookie("__Secure-Token").is_some());
     let user = unwrap.clone().user;
 
-    let active_user = if token_user.is_some() && token_user.as_ref().unwrap().success {
-        Option::Some(token_user.unwrap().payload.unwrap().user)
+    let active_user = if token_user.is_some() && token_user.as_ref().unwrap().is_ok() {
+        Option::Some(token_user.unwrap().ok().unwrap().user)
     } else {
         Option::None
     };
@@ -432,16 +429,15 @@ pub async fn followers_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: db::DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(username).await;
+    let user = data.db.get_user_by_username(username).await;
 
-    if user.success == false {
+    if user.is_ok() == false {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "text/plain"))
             .body("404: Not Found");
     }
 
-    let unwrap = user.payload.as_ref().unwrap();
+    let unwrap = user.ok().unwrap();
 
     // verify auth status
     let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
@@ -485,16 +481,15 @@ pub async fn following_request(
     let username: String = req.match_info().get("username").unwrap().to_string();
     let username_c = username.clone();
 
-    let user: db::DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(username).await;
+    let user = data.db.get_user_by_username(username).await;
 
-    if user.success == false {
+    if user.is_ok() == false {
         return HttpResponse::NotFound()
             .append_header(("Content-Type", "text/plain"))
             .body("404: Not Found");
     }
 
-    let unwrap = user.payload.as_ref().unwrap();
+    let unwrap = user.ok().unwrap();
 
     // verify auth status
     let (set_cookie, _, _) = base::check_auth_status(req.clone(), data.clone()).await;
@@ -535,14 +530,12 @@ pub async fn user_settings_request(
 ) -> impl Responder {
     // get user
     let name: String = req.match_info().get("name").unwrap().to_string();
-    let profile: db::DefaultReturn<Option<FullUser<String>>> =
-        data.db.get_user_by_username(name).await;
-
-    if profile.success == false {
-        return HttpResponse::NotFound().body(profile.message);
-    }
-
-    let profile = profile.payload.unwrap();
+    let profile = match data.db.get_user_by_username(name).await {
+        Ok(p) => p,
+        Err(e) => {
+            return HttpResponse::NotFound().body(e.to_string());
+        }
+    };
 
     // verify auth status
     let (set_cookie, token_cookie, token_user) =
@@ -553,7 +546,7 @@ pub async fn user_settings_request(
     }
 
     // ...
-    let user = token_user.unwrap().payload.unwrap();
+    let user = token_user.unwrap().ok().unwrap();
     let can_view: bool = (user.user.username == profile.user.username)
         | (user
             .level
@@ -570,7 +563,9 @@ pub async fn user_settings_request(
     let base = base::get_base_values(token_cookie.is_some());
     let props = SettingsTemplate {
         profile: profile.clone().user,
-        metadata: profile.user.metadata.replace("/", "\\/"),
+        metadata: serde_json::to_string(&profile.user.metadata)
+            .unwrap()
+            .replace("/", "\\/"),
         auth_state: base.auth_state,
         info: base.info,
         bundlrs: base.bundlrs,

@@ -1,6 +1,7 @@
 use actix_web::{web::Data, HttpRequest};
 
 use crate::db::AppData;
+use dorsal::db::special::auth_db::{FullUser, UserMetadata, Result};
 
 pub struct BaseTemplate {
     pub info: String,
@@ -45,15 +46,13 @@ pub async fn check_auth_status(
 ) -> (
     String,
     Option<actix_web::cookie::Cookie<'static>>,
-    Option<dorsal::DefaultReturn<Option<dorsal::db::special::auth_db::FullUser<String>>>>,
+    Option<Result<FullUser<UserMetadata>>>,
 ) {
     // verify auth status
     let token_cookie = req.cookie("__Secure-Token");
     let mut set_cookie: &str = "";
 
-    let mut token_user: Option<
-        dorsal::DefaultReturn<Option<dorsal::db::special::auth_db::FullUser<String>>>,
-    > = if token_cookie.is_some() {
+    let mut token_user: Option<Result<FullUser<UserMetadata>>> = if token_cookie.is_some() {
         Option::Some(
             data.db
                 .auth
@@ -66,7 +65,7 @@ pub async fn check_auth_status(
 
     if token_user.is_some() {
         // make sure user exists, refresh token if not
-        if token_user.as_ref().unwrap().success == false {
+        if token_user.as_ref().unwrap().is_ok() == false {
             set_cookie = "__Secure-Token=refresh; SameSite=Strict; Secure; Path=/; HostOnly=true; HttpOnly=true; Max-Age=0";
             token_user = Option::None;
         }
