@@ -107,11 +107,13 @@ pub async fn login(body: web::Json<LoginInfo>, data: web::Data<AppData>) -> impl
             .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
             .append_header(("Content-Type", "application/json"))
             .body(
-                serde_json::to_string::<DefaultReturn<FullUser<UserMetadata>>>(&DefaultReturn {
-                    success: true,
-                    message: String::new(),
-                    payload: res.ok().unwrap(),
-                })
+                serde_json::to_string::<DefaultReturn<Option<FullUser<UserMetadata>>>>(
+                    &DefaultReturn {
+                        success: true,
+                        message: String::new(),
+                        payload: None,
+                    },
+                )
                 .unwrap(),
             );
     }
@@ -153,11 +155,13 @@ pub async fn login_secondary_token(
             .append_header(("Set-Cookie", if res.is_ok() { &set_cookie } else { "" }))
             .append_header(("Content-Type", "application/json"))
             .body(
-                serde_json::to_string::<DefaultReturn<FullUser<UserMetadata>>>(&DefaultReturn {
-                    success: true,
-                    message: String::new(),
-                    payload: res.ok().unwrap(),
-                })
+                serde_json::to_string::<DefaultReturn<Option<FullUser<UserMetadata>>>>(
+                    &DefaultReturn {
+                        success: true,
+                        message: String::new(),
+                        payload: None,
+                    },
+                )
                 .unwrap(),
             );
     }
