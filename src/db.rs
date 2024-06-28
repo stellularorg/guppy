@@ -68,8 +68,17 @@ impl Database {
 
         Database {
             base: db.clone(),
-            auth: dorsal::AuthDatabase { base: db.clone() },
-            logs: dorsal::LogDatabase { base: db },
+            auth: dorsal::AuthDatabase {
+                base: db.clone(),
+                options: dorsal::db::special::auth_db::DatabaseOptions::default(),
+            },
+            logs: dorsal::LogDatabase {
+                base: db,
+                options: dorsal::db::special::log_db::DatabaseOptions {
+                    table: String::from("Logs"),
+                    prefix: String::from("log"),
+                },
+            },
         }
     }
 
@@ -662,16 +671,27 @@ impl Database {
 
         if existing.success {
             // delete log and return
-            return self.logs.delete_log(existing.payload.unwrap().id).await;
+            if let Err(e) = self.logs.delete_log(existing.payload.unwrap().id).await {
+                return e.into();
+            }
         }
 
         // return
-        self.logs
+        match self
+            .logs
             .create_log(
                 String::from("follow"),
                 serde_json::to_string::<UserFollow>(&p).unwrap(),
             )
             .await
+        {
+            Ok(_) => DefaultReturn {
+                success: true,
+                message: String::from("Log created"),
+                payload: Some(String::new()),
+            },
+            Err(e) => e.into(),
+        }
     }
 
     // activity
@@ -1464,7 +1484,14 @@ impl Database {
                 .await;
 
             // handle log
-            return self.logs.delete_log(payload.id).await;
+            return match self.logs.delete_log(payload.id).await {
+                Ok(_) => DefaultReturn {
+                    success: true,
+                    message: String::from("Post unliked"),
+                    payload: Some(String::new()),
+                },
+                Err(e) => e.into(),
+            };
         }
         // add new
         else {
@@ -1475,7 +1502,7 @@ impl Database {
                 .await;
 
             // handle log
-            return self
+            return match self
                 .logs
                 .create_log(
                     String::from("post_favorite"),
@@ -1485,7 +1512,15 @@ impl Database {
                     })
                     .unwrap(),
                 )
-                .await;
+                .await
+            {
+                Ok(_) => DefaultReturn {
+                    success: true,
+                    message: String::from("Post liked"),
+                    payload: Some(String::new()),
+                },
+                Err(e) => e.into(),
+            };
         }
     }
 }
