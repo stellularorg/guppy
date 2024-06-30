@@ -301,7 +301,8 @@ impl Database {
 
         if existing_in_cache.is_some() {
             let mut user =
-                serde_json::from_str::<UserState<String>>(&existing_in_cache.unwrap()).unwrap();
+                serde_json::from_str::<UserState<UserMetadata>>(&existing_in_cache.unwrap())
+                    .unwrap();
             user.metadata = meta.to_string(); // update metadata
 
             // update cache
@@ -309,7 +310,7 @@ impl Database {
                 .cachedb
                 .update(
                     format!("user:{}", name),
-                    serde_json::to_string::<UserState<String>>(&user).unwrap(),
+                    serde_json::to_string::<UserState<UserMetadata>>(&user).unwrap(),
                 )
                 .await;
         }
@@ -371,7 +372,8 @@ impl Database {
 
         if existing_in_cache.is_some() {
             let mut user =
-                serde_json::from_str::<UserState<String>>(&existing_in_cache.unwrap()).unwrap();
+                serde_json::from_str::<UserState<UserMetadata>>(&existing_in_cache.unwrap())
+                    .unwrap();
             user.role = String::from("banned"); // update role
 
             // update cache
@@ -379,7 +381,7 @@ impl Database {
                 .cachedb
                 .update(
                     format!("user:{}", name),
-                    serde_json::to_string::<UserState<String>>(&user).unwrap(),
+                    serde_json::to_string::<UserState<UserMetadata>>(&user).unwrap(),
                 )
                 .await;
         }
