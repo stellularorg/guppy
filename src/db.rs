@@ -297,23 +297,7 @@ impl Database {
         }
 
         // update cache
-        let existing_in_cache = self.base.cachedb.get(format!("user:{}", name)).await;
-
-        if existing_in_cache.is_some() {
-            let mut user =
-                serde_json::from_str::<UserState<UserMetadata>>(&existing_in_cache.unwrap())
-                    .unwrap();
-            user.metadata = meta.to_string(); // update metadata
-
-            // update cache
-            self.base
-                .cachedb
-                .update(
-                    format!("user:{}", name),
-                    serde_json::to_string::<UserState<UserMetadata>>(&user).unwrap(),
-                )
-                .await;
-        }
+        self.base.cachedb.remove(format!("user:{}", name)).await;
 
         // return
         return DefaultReturn {

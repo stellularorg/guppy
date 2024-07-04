@@ -180,7 +180,7 @@ del,
 
 /* input */
 textarea {
-    @apply bg-transparent p-2 rounded-sm min-h-full resize-none;
+    @apply bg-transparent p-2 rounded-sm min-h-full resize-y;
 }
 
 input,
